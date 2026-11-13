@@ -51,6 +51,7 @@ Blackjack at 3:2 on an odd bet and insurance at half the bet both produce half c
 |---|---|---|
 | `split_by_value` | `True` | K-Q can split. Usual for online blackjack. |
 | `split_deal_both_first` | `False` | Second split hand gets its card when its turn starts (casino procedure). Changes which card lands where, not the odds. |
+| `double_totals` | `None` (any two cards) | The user reported doubling on any first two cards. The rules text in a development build of the game client says "Double available when player shows 9, 10 or 11" (see `research/archetypes.md` §1.2). The flag was added so either can be modeled; set it to `(9, 10, 11)` if a soft or hard-8 double is refused in the app. |
 | `split_21_is_blackjack` | `False` | Ace-ten after a split pays 1:1. Standard. |
 | `side_bet_min` | `10` | Same minimum as the main bet. |
 | `require_balance_for_extra_bets` | `True` | No longer a guess for double and split: the user confirmed (2026-11-13) both are greyed out after betting the whole balance. Assumed to apply to insurance too. |
@@ -89,3 +90,13 @@ For the record, a web search the same day found no written source for the tie ru
 
 ### Sanity check
 600,000 seeded rounds of approximate basic strategy at 6 decks came out at −0.39% ± 0.15% per unit bet, in line with the expected house edge for these rules. 150,000 rounds at 1 deck came out at +0.12% ± 0.30%, also plausible. The exact figure comes from the Phase 2 solver.
+
+## Research delivered (2026-11-13)
+
+`research/archetypes.md` is in. It models each opponent as a bet style × a play-skill tier, not the plan's single list of eight archetypes, because casino data show play errors are roughly independent of bet size. Phase 3 should build `agents/archetypes.py` on that two-dimensional structure. Every population share in it is a low-confidence prior: the game launched on 2026-11-10 and there is no player data yet.
+
+The research also found a public development build of the game client. It is a dev build, so each item needs confirming in the app, but two already match what the user saw (bankruptcy under 10 chips, one split):
+- **Doubling may be limited to 9, 10 or 11.** Conflicts with the user's report; now behind `double_totals` (D8).
+- **A timeout leaves a balance of 0**, so running out the clock is the same as going bankrupt.
+- **Chip denominations are 5, 10, 25, 100, 500, 1000, with 25 selected by default.** Bets are built by tapping chips, so bets are multiples of 5, and odd multiples of 5 produce half chips on a blackjack (D7).
+- **REPLAY** repeats the last round's bets and **PLAY 2x** doubles them, which makes flat betting and doubling-up the lowest-effort choices.

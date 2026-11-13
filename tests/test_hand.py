@@ -68,6 +68,17 @@ def test_double_and_split_need_chips_to_cover():
     assert legal_actions(hand("8s 8d", bet=100), lenient, bankroll=0) == (S, H, D, P)
 
 
+def test_double_can_be_limited_to_certain_totals():
+    restricted = DEFAULT_RULES.with_(double_totals=(9, 10, 11))
+    for text in ["5s 4d", "6s 4d", "6s 5d"]:
+        assert D in legal_actions(hand(text), restricted)
+    for text in ["5s 3d", "7s 5d", "As 7d", "Ts 9d"]:  # 8, 12, soft 18, 19
+        assert D in legal_actions(hand(text), DEFAULT_RULES)
+        assert D not in legal_actions(hand(text), restricted)
+    assert legal_actions(hand("5s 5d"), restricted) == (S, H, D, P)
+    assert legal_actions(hand("8s 8d"), restricted) == (S, H, P)
+
+
 def test_mixed_ten_value_cards_split_only_when_allowed():
     assert P in legal_actions(hand("Ks Qd"), DEFAULT_RULES)
     strict = DEFAULT_RULES.with_(split_by_value=False)

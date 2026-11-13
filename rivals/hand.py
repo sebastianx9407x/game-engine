@@ -105,7 +105,8 @@ def legal_actions(
     actions = [Action.STAND, Action.HIT]
     if len(hand.cards) == 2:
         can_cover = bankroll >= hand.bet or not rules.require_balance_for_extra_bets
-        if can_cover and (not hand.from_split or rules.double_after_split):
+        total_allowed = rules.double_totals is None or hand.total in rules.double_totals
+        if can_cover and total_allowed and (not hand.from_split or rules.double_after_split):
             actions.append(Action.DOUBLE)
         if can_cover and num_hands - 1 < rules.max_splits and is_pair(hand, rules):
             actions.append(Action.SPLIT)

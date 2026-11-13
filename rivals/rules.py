@@ -62,6 +62,11 @@ class RulesConfig:
     #: requires identical ranks.
     split_by_value: bool = True
     double_after_split: bool = True
+    #: UNCONFIRMED. Hand totals that may double; None means any two cards.
+    #: The user reported any two cards, but the rules text in a development
+    #: build of the game client says doubling is limited to 9, 10 or 11.
+    #: Set to (9, 10, 11) if that turns out to hold in the app.
+    double_totals: tuple[int, ...] | None = None
     hit_split_aces: bool = True
     #: UNCONFIRMED. Does a two-card 21 on a split hand pay as a blackjack?
     split_21_is_blackjack: bool = False

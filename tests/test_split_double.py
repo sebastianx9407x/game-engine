@@ -44,6 +44,14 @@ def test_double_is_allowed_on_any_first_two_cards():
         assert D in policy.legal_seen[0]
 
 
+def test_double_restricted_to_nine_ten_eleven_when_configured():
+    restricted = DEFAULT_RULES.with_(double_totals=(9, 10, 11))
+    result, _ = play("6s 5d", "Tc 8h", [D], player_draws="9h", rules=restricted)
+    assert result.net == 20
+    with pytest.raises(IllegalActionError):
+        play("As 7d", "Tc 8h", [D], player_draws="2h", rules=restricted)
+
+
 def test_double_is_not_allowed_after_a_hit():
     with pytest.raises(IllegalActionError):
         play("2s 3d", "Tc 8h", [H, D], player_draws="4h 5c")
