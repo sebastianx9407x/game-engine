@@ -43,16 +43,16 @@ That is roughly 35k rounds per second per core: fine for tests and notebooks, to
 ### Choices the plan left open
 
 **D7. Chips are plain numbers and may be fractional.**
-Blackjack at 3:2 on an odd bet and insurance at half the bet both produce half chips (bet 25 pays 37.5). Amounts are not rounded, and bets are not forced to a chip denomination. Every value that can arise is a multiple of a power of two, which floats hold exactly, so "who has more chips" comparisons stay exact. If the app turns out to round payouts or restrict bet sizes, add a rounding rule or a bet increment to `RulesConfig`.
+Blackjack at 3:2 on an odd bet and insurance at half the bet both produce half chips (bet 25 pays 37.5). Amounts are not rounded, and bets are not forced to a chip denomination. Every value that can arise is a multiple of a power of two, which floats hold exactly, so "who has more chips" comparisons stay exact. The user confirmed (2026-11-13) that the app pays fractional chips, so no rounding rule is needed.
 
 **D8. Extra rule flags for things nobody has confirmed.** All are in `RulesConfig`, marked UNCONFIRMED:
 
 | Flag | Default | Why this default |
 |---|---|---|
-| `split_by_value` | `True` | K-Q can split. Usual for online blackjack. |
+| `split_by_value` | `True` | No longer a guess: the user confirmed (2026-11-13) that 10, J, Q and K all split with each other. |
 | `split_deal_both_first` | `False` | Second split hand gets its card when its turn starts (casino procedure). Changes which card lands where, not the odds. |
 | `double_totals` | `(9, 10, 11)` | No longer a guess: the user read the rule in the app (2026-11-13), "Double available when player shows 9, 10 or 11", matching the dev client build. The plan's "double on any first two cards" was wrong. Still open: a soft hand counts by its best total here, so ace-8 (shown as 9/19) cannot double; check in the app. |
-| `split_21_is_blackjack` | `False` | Ace-ten after a split pays 1:1. Standard. |
+| `split_21_is_blackjack` | `False` | No longer a guess: the user confirmed (2026-11-13) that ace-ten after a split pays 1:1. |
 | `side_bet_min` | `10` | Same minimum as the main bet. |
 | `require_balance_for_extra_bets` | `True` | No longer a guess for double and split: the user confirmed (2026-11-13) both are greyed out after betting the whole balance. Assumed to apply to insurance too. |
 | `dealer_peeks` | `True` | From the plan. With `False`, a dealer blackjack takes doubled and split bets too. |

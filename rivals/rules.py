@@ -51,6 +51,7 @@ class RulesConfig:
     dealer_peeks: bool = True
 
     # --- main-bet payouts ---
+    #: Confirmed in the app: paid exactly, so odd bets produce half chips.
     blackjack_payout: float = 1.5
     #: Confirmed in the app: insurance exists, costs half the stake, pays 2:1.
     insurance_offered: bool = True
@@ -59,8 +60,8 @@ class RulesConfig:
     # --- player options ---
     #: Number of splits allowed per round (1 means at most two hands).
     max_splits: int = 1
-    #: UNCONFIRMED. True lets any two ten-value cards split (K-Q); False
-    #: requires identical ranks.
+    #: True lets any two ten-value cards split (K-Q); False requires identical
+    #: ranks. Confirmed in the app: 10, J, Q and K all split with each other.
     split_by_value: bool = True
     double_after_split: bool = True
     #: Hand totals that may double; None means any two cards. Confirmed in
@@ -69,7 +70,8 @@ class RulesConfig:
     #: ace-8 (shown as 9/19) cannot double.
     double_totals: tuple[int, ...] | None = (9, 10, 11)
     hit_split_aces: bool = True
-    #: UNCONFIRMED. Does a two-card 21 on a split hand pay as a blackjack?
+    #: Does a two-card 21 on a split hand pay as a blackjack? Confirmed in the
+    #: app: no, ace-ten after a split pays 1:1.
     split_21_is_blackjack: bool = False
     #: Late surrender (first decision only, lose half the bet). Confirmed in
     #: the app: 21 Rivals has no surrender.
