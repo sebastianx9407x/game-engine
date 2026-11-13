@@ -25,6 +25,11 @@ from rivals.agents.base import Agent
 from rivals.match import AgentFactory, SimulationResult, Tally, simulate
 from rivals.rules import DEFAULT_RULES, RulesConfig
 
+#: First match seed used for scoring. Kept far from the seeds the optimizer
+#: fits on (0 upwards) and holds out (50,000,000 upwards), so scoring an
+#: optimised tactic never replays shoes it was fitted to.
+EVALUATION_SEED = 20_000_000
+
 _LOADED: dict[str, type[Agent]] = {}
 
 
@@ -135,7 +140,7 @@ def evaluate(
     opponents: AgentFactory | None = None,
     *,
     matches: int = 20_000,
-    seed: int = 0,
+    seed: int = EVALUATION_SEED,
     processes: int = 1,
     rules: RulesConfig = DEFAULT_RULES,
     baselines: list[AgentFactory] | None = None,
@@ -224,7 +229,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("tactic", help="path to a tactic file, optionally path.py:ClassName")
     parser.add_argument("--matches", type=int, default=20_000)
-    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--seed", type=int, default=EVALUATION_SEED)
     parser.add_argument(
         "--processes", type=int, default=max(1, min(8, (os.cpu_count() or 2) - 1))
     )

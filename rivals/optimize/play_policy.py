@@ -70,6 +70,30 @@ class ChartPlay:
         return ChartPolicy(self.chart(rules))
 
 
+class FixedChart:
+    """A play style that uses a chart it was handed, e.g. one stored in a saved policy."""
+
+    def __init__(self, name: str, chart: Chart) -> None:
+        self.name = name
+        self._chart = chart
+
+    def chart(self, rules: RulesConfig) -> Chart:
+        return self._chart
+
+    def policy(self, rules: RulesConfig) -> ChartPolicy:
+        return ChartPolicy(self._chart)
+
+
+def styles_of(policy) -> tuple:
+    """The play styles a saved `BetPolicy` was solved with, rebuilt from its own charts."""
+    from rivals.optimize.bet_policy import BasicPlay
+
+    styles: list = [BasicPlay()]
+    for name, chart in list(zip(policy.style_names, policy.style_charts))[1:]:
+        styles.append(FixedChart(name, chart))
+    return tuple(styles)
+
+
 def chart_differences(chart: Chart, baseline: Chart) -> list[str]:
     """Human-readable list of the cells where ``chart`` departs from ``baseline``."""
     from rivals.solver.basic import HARD_TOTALS, SOFT_TOTALS

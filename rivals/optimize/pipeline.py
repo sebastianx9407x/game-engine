@@ -18,6 +18,8 @@ import time
 from dataclasses import dataclass, replace
 from pathlib import Path
 
+import numpy as np
+
 from rivals.match import AgentFactory
 from rivals.optimize.bet_policy import (
     BasicPlay,
@@ -54,8 +56,10 @@ def actions_with_styles(styles: tuple) -> list[BetAction]:
 @dataclass
 class Optimized:
     policy: BetPolicy
-    #: Score by history mode: (on the matches it was solved from, on held-out matches).
+    #: Score by history mode: (on the matches it was solved from, on the selection half of the hold-out).
     scores: dict[str, tuple[float, float]]
+    #: Score of the chosen policy on the half of the hold-out that played no part in choosing it.
+    final_score: float
     train: Scenarios
     holdout: Scenarios
 
@@ -75,8 +79,9 @@ def optimize(
 ) -> Optimized:
     """Search for the best bet schedule against ``opponents`` (default: the archetype population).
 
-    Each history mode is solved on the training matches and scored on the
-    held-out ones; the mode with the best held-out score is returned.
+    Each history mode is solved on the training matches. Half of the held-out
+    matches pick the best mode; the other half, which influenced nothing,
+    gives the score to quote (`final_score`).
     """
     if opponents is None:
         from rivals.optimize.population import default_population
@@ -92,6 +97,10 @@ def optimize(
     holdout = build_scenarios(opponents, holdout_matches, seed=seed + HOLDOUT_OFFSET, **common)
     log(f"recorded {matches:,} + {holdout_matches:,} matches in {time.time() - started:.0f}s")
 
+    half = holdout.matches // 2
+    select = holdout.subset(np.arange(half))
+    untouched = holdout.subset(np.arange(half, holdout.matches))
+
     actions = actions_with_styles(styles)
     charts = tuple(getattr(style, "chart", lambda r: None)(rules) for style in styles)
     scores: dict[str, tuple[float, float]] = {}
@@ -101,13 +110,15 @@ def optimize(
         started = time.time()
         policy = solve_bet_policy(train, actions=actions, history=mode)
         policy.style_charts = charts
-        held = policy_score(holdout, policy)
+        held = policy_score(select, policy)
         scores[mode] = (policy.expected_score, held)
         log(f"history={mode}: score {policy.expected_score:.4f} fitted, {held:.4f} held out "
             f"({time.time() - started:.0f}s)")
         if held > best_score:
             best, best_score = policy, held
-    return Optimized(best, scores, train, holdout)
+    final = policy_score(untouched, best)
+    log(f"chosen: history={best.history}, score {final:.4f} on {untouched.matches:,} untouched matches")
+    return Optimized(best, scores, final, train, holdout)
 
 
 def save_policy(policy: BetPolicy, path: Path = DEFAULT_POLICY_PATH) -> Path:

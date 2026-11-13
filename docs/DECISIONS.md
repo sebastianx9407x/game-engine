@@ -210,8 +210,21 @@ Noted, not acted on yet:
 
 **O5. Play styles replace the plan's "deviation tables keyed on estimated lead".** A `seek` chart and an `avoid` chart are built like basic strategy but take the most (or least) volatile action whose EV is within 0.03 units of the best. Each main bet can be combined with either, and the search decides where they help, so "estimated lead" is not hand-coded: it is whatever the balance and history imply. Measured effect on a single round is small (standard deviation 1.137 and 1.097 against basic's 1.105, each costing about 0.07% of a bet), so bet size and side bets are the real variance tools; the styles matter mainly because playing differently from the opponent also changes the dealer's cards.
 
-**O6. Honest scoring.** The fitted score flatters the policy, so `optimize()` also scores it on matches it never saw, and the final check is `python -m rivals.evaluate tactics/optimized.py`, which plays it through the real round engine on a third set of matches.
+**O6. Honest scoring.** Three sets of matches that never overlap: the optimizer fits on seeds from 0, holds out seeds from 50,000,000, and `rivals.evaluate` scores on seeds from 20,000,000. Half of the hold-out picks the history mode; the other half, which influenced nothing, gives `final_score`. The last check is `python -m rivals.evaluate tactics/optimized.py`, which plays the policy through the real round engine.
 
 **O7. `rivals/report/cheatsheet.py`** (Phase 5, brought forward) lists only the situations the policy actually reaches, merges neighbouring balances with the same instruction, and orders them by how often they occur.
 
-**O8. Known limit.** The agent judges "win, loss or push" from its own main-bet result, while the search used the result a basic-strategy player with spare chips would have had. They differ in under 1% of matches (a hand the player could not afford to double or split).
+**O8. History is what the player actually saw.** When the search plays a recorded match forward, each later bet is keyed on the main-bet result of the play style and chip cover actually used, exactly as the live agent sees it. The search's roll-forward therefore reproduces the real engine match for match (tested, including non-basic play styles). One approximation remains: when choosing the bet for hand N, the recorded matches are grouped by what a basic-strategy player would have seen in hands 1 to N−1, which differs from the player's own view in the few percent of matches where an earlier hand was played in another style.
+
+## Phases 2–4 review by Opus (2026-11-13)
+
+An Opus reviewer checked the solver against its own exact-fraction brute force on ten cases the tests did not cover (multi-step hits, soft hands, doubled split legs, the unchecked ten) and it matched to 1e-15. It reproduced every figure in the results table, found the bet arithmetic of the search identical to the real engine over 9,000 random-policy matches, and found no information leak in the backward induction and no engineering defect in the opponent models. Its verdict: the optimizer's scores and strategy are a faithful solution to the model. Whether the opponent model matches real players is a separate question.
+
+Fixed after the review:
+- `rivals.evaluate` scored on the same shoes the optimizer trained on (both started at seed 0). It now starts at 20,000,000 (O6). Measured inflation had been about 0.001 to 0.002.
+- The search keyed later bets on a basic-strategy result the player never sees whenever a non-basic style was used (6.5% of matches). Now keyed on what was actually seen (O8).
+- Strategy-card balance ranges were built from observed balances and could span a level with a different instruction. They now follow the policy's own balance levels.
+- The history mode was chosen and reported on the same hold-out. The hold-out is now split in two (O6).
+- `PolicyAgent` silently played basic strategy if a policy used a play style without carrying its chart. It now raises. The card command records matches with the policy's own charts.
+
+Measured, not changed: the split distribution's mean differs from the split EV by at most 0.002 units at six decks (0.007 at one deck), and its standard deviation is within 0.4%.

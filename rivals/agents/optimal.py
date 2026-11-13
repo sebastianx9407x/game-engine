@@ -40,11 +40,16 @@ class PolicyAgent(Agent):
         return SideBets(float(pairs), float(total))
 
     def act(self, ctx: DecisionContext, state: MatchState) -> Action:
-        charts = self.policy.style_charts
         style = self._action.style
-        chart = charts[style] if style < len(charts) else None
-        if chart is None:
+        if style == 0:
             return self.basic_action(ctx)
+        charts = self.policy.style_charts
+        if style >= len(charts) or charts[style] is None:
+            raise ValueError(
+                f"the policy uses play style {style} but carries no chart for it; "
+                "set policy.style_charts (optimize() does this)"
+            )
+        chart = charts[style]
         hand = ctx.hand
         pair = value_index(hand.cards[0]) if Action.SPLIT in ctx.legal else None
         return chart.action(hand.total, hand.is_soft, pair, value_index(ctx.upcard), ctx.legal)

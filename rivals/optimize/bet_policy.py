@@ -166,7 +166,7 @@ class BetAction:
     def amounts(self, balance):
         """(main, pairs, total) stakes for a balance; works on numbers and arrays."""
         if self.main:
-            main = np.minimum(self.main, balance) if self.main_fraction else self.main + 0 * balance
+            main = self.main + 0 * balance
         else:
             main = np.floor(self.main_fraction * balance / CHIP) * CHIP
         rest = np.maximum(balance - main, 0)
@@ -292,8 +292,12 @@ class _Arrays:
         self.style = np.array([a.style for a in actions], dtype=np.int64)
 
 
-def _play(sc: Scenarios, arr: _Arrays, rows: np.ndarray, r: int, balance: np.ndarray, act) -> np.ndarray:
-    """Balances after betting action(s) ``act`` in round ``r`` on matches ``rows``."""
+def _play(sc: Scenarios, arr: _Arrays, rows: np.ndarray, r: int, balance: np.ndarray, act):
+    """Bet action(s) ``act`` in round ``r`` on matches ``rows``.
+
+    Returns the new balances and what the player saw happen to the main bet
+    (0 loss, 1 push, 2 win), which is what later history keys are built from.
+    """
     fixed = arr.main[act]
     fraction = arr.main_fraction[act]
     main = np.where(fixed > 0, fixed, np.floor(fraction * balance / CHIP) * CHIP)
@@ -306,20 +310,27 @@ def _play(sc: Scenarios, arr: _Arrays, rows: np.ndarray, r: int, balance: np.nda
     net = main * unit
     net = net + np.where(pay_pairs > 0, pairs * pay_pairs, -pairs)
     net = net + np.where(pay_total > 0, total * pay_total, -total)
-    return balance + net
+    return balance + net, (np.sign(unit) + 1).astype(np.int64)
 
 
 def _finish(
-    sc: Scenarios, arr: _Arrays, policy: BetPolicy, keys: list[np.ndarray],
+    sc: Scenarios, arr: _Arrays, policy: BetPolicy, seen: np.ndarray,
     rows: np.ndarray, start_round: int, balance: np.ndarray,
 ) -> np.ndarray:
-    """Final balances after playing rounds ``start_round`` onwards with ``policy``."""
+    """Final balances after playing rounds ``start_round`` onwards with ``policy``.
+
+    ``seen`` is (len(rows), rounds): the main-bet result the player observed
+    in each earlier round. It is filled in as the rounds are played, so every
+    later bet is keyed on what the player would really have seen, whatever
+    play style and chip cover produced it.
+    """
     min_bet = sc.rules.min_bet
     for r in range(start_round, sc.rounds):
         alive = balance >= min_bet
         level = np.maximum(np.searchsorted(policy.grid, balance, side="right") - 1, 0)
-        act = policy.tables[r][keys[r][rows], level]
-        played = _play(sc, arr, rows, r, balance, act)
+        act = policy.tables[r][history_keys(seen, r, policy.history), level]
+        played, category = _play(sc, arr, rows, r, balance, act)
+        seen[:, r] = category
         balance = np.where(alive, played, balance)
     return balance
 
@@ -364,8 +375,9 @@ def solve_bet_policy(
         opponents = sc.opponents[rows]
         best, best_value = 0, -1.0
         for a in np.flatnonzero(valid[level]):
-            after = _play(sc, arr, rows, r, balance, int(a))
-            final = _finish(sc, arr, policy, keys, rows, r + 1, after)
+            seen = cats[rows]
+            after, seen[:, r] = _play(sc, arr, rows, r, balance, int(a))
+            final = _finish(sc, arr, policy, seen, rows, r + 1, after)
             value = _score(final, opponents, tie)
             if value > best_value + 1e-12:
                 best, best_value = int(a), value
@@ -389,8 +401,9 @@ def solve_bet_policy(
                 elif len(rows):
                     choice = without_history(lvl)[0]
                     balance = np.full(len(rows), grid[lvl])
-                    after = _play(sc, arr, rows, r, balance, choice)
-                    final = _finish(sc, arr, policy, keys, rows, r + 1, after)
+                    seen = cats[rows]
+                    after, seen[:, r] = _play(sc, arr, rows, r, balance, choice)
+                    final = _finish(sc, arr, policy, seen, rows, r + 1, after)
                     value = _score(final, sc.opponents[rows], tie)
                 else:
                     choice, value = without_history(lvl)
@@ -399,24 +412,20 @@ def solve_bet_policy(
     return policy
 
 
+def policy_finals(sc: Scenarios, policy: BetPolicy) -> np.ndarray:
+    """Final balance on each recorded match when betting ``policy``.
+
+    This replays exactly what `PolicyAgent` does in the real engine.
+    """
+    arr = _Arrays(policy.actions)
+    seen = np.ones((sc.matches, sc.rounds), dtype=np.int64)
+    start = np.full(sc.matches, sc.rules.starting_chips, dtype=np.float64)
+    return _finish(sc, arr, policy, seen, np.arange(sc.matches), 0, start)
+
+
 def policy_score(sc: Scenarios, policy: BetPolicy) -> float:
     """Score of ``policy`` on recorded matches (use ones it was not solved from)."""
-    arr = _Arrays(policy.actions)
-    cats = sc.categories()
-    keys = [history_keys(cats, r, policy.history) for r in range(sc.rounds)]
-    rows = np.arange(sc.matches)
-    start = np.full(sc.matches, sc.rules.starting_chips, dtype=np.float64)
-    final = _finish(sc, arr, policy, keys, rows, 0, start)
-    return _score(final, sc.opponents, sc.rules.tie_value)
-
-
-def policy_finals(sc: Scenarios, policy: BetPolicy) -> np.ndarray:
-    """Final balance on each recorded match when betting ``policy``."""
-    arr = _Arrays(policy.actions)
-    cats = sc.categories()
-    keys = [history_keys(cats, r, policy.history) for r in range(sc.rounds)]
-    start = np.full(sc.matches, sc.rules.starting_chips, dtype=np.float64)
-    return _finish(sc, arr, policy, keys, np.arange(sc.matches), 0, start)
+    return _score(policy_finals(sc, policy), sc.opponents, sc.rules.tie_value)
 
 
 def policy_trace(sc: Scenarios, policy: BetPolicy) -> list[dict[str, np.ndarray]]:
@@ -427,15 +436,16 @@ def policy_trace(sc: Scenarios, policy: BetPolicy) -> list[dict[str, np.ndarray]
     ``action`` index chosen.
     """
     arr = _Arrays(policy.actions)
-    cats = sc.categories()
     rows = np.arange(sc.matches)
+    seen = np.ones((sc.matches, sc.rounds), dtype=np.int64)
     balance = np.full(sc.matches, sc.rules.starting_chips, dtype=np.float64)
     trace = []
     for r in range(sc.rounds):
-        key = history_keys(cats, r, policy.history)
+        key = history_keys(seen, r, policy.history)
         alive = balance >= sc.rules.min_bet
         level = np.maximum(np.searchsorted(policy.grid, balance, side="right") - 1, 0)
         act = policy.tables[r][key, level]
-        trace.append({"alive": alive, "key": key, "balance": balance.copy(), "action": act})
-        balance = np.where(alive, _play(sc, arr, rows, r, balance, act), balance)
+        trace.append({"alive": alive, "key": key, "balance": balance.copy(), "action": act, "level": level})
+        played, seen[:, r] = _play(sc, arr, rows, r, balance, act)
+        balance = np.where(alive, played, balance)
     return trace

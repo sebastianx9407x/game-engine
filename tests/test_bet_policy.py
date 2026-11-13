@@ -156,13 +156,11 @@ def test_every_table_entry_is_a_legal_bet(policy):
 def test_policy_agent_reproduces_the_search_roll_forward(train, policy):
     finals = policy_finals(train, policy)
     agent = PolicyAgent(policy)
-    same = 0
+    # The roll-forward keys every bet on the result the player actually saw,
+    # so it reproduces the real engine exactly, match by match.
     for i in range(400):
         real = play_player(agent, match_shoes(int(train.seeds[i])), random.Random(1)).final_balance
-        same += real == finals[i]
-    # They differ only when a hand the agent could not afford to double or
-    # split would have ended the other side of zero.
-    assert same >= 0.97 * 400
+        assert real == finals[i], int(train.seeds[i])
 
 
 def test_policy_agent_plays_legally_and_scores_like_the_estimate(policy):

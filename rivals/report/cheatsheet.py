@@ -12,7 +12,13 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from rivals.optimize.bet_policy import BetPolicy, Scenarios, describe_key, policy_trace
+from rivals.optimize.bet_policy import (
+    BetPolicy,
+    Scenarios,
+    describe_key,
+    policy_score,
+    policy_trace,
+)
 from rivals.optimize.play_policy import chart_differences
 from rivals.solver.basic import basic_chart
 
@@ -31,38 +37,50 @@ class Rule:
 
     @property
     def balance(self) -> str:
+        if self.high == float("inf"):
+            return f"{self.low:,.0f} or more"
         if self.low == self.high:
             return f"{self.low:,.0f}"
         return f"{self.low:,.0f}-{self.high:,.0f}"
 
 
 def bet_rules(sc: Scenarios, policy: BetPolicy, min_share: float = 0.002) -> list[Rule]:
-    """The policy's reachable situations as rules, dropping those rarer than ``min_share``."""
+    """The policy's reachable situations as rules, dropping those rarer than ``min_share``.
+
+    Balance ranges follow the policy's own balance levels: neighbouring levels
+    are merged only when the policy gives them the same instruction, so a
+    range never hides a different one. ``low``-``high`` covers every balance
+    from ``low`` up to, but not including, the next range.
+    """
     trace = policy_trace(sc, policy)
+    grid = policy.grid
     rules: list[Rule] = []
     for r, step in enumerate(trace):
         alive = step["alive"]
+        table = policy.tables[r]
         for key in np.unique(step["key"][alive]):
             mask = alive & (step["key"] == key)
-            balances, actions = step["balance"][mask], step["action"][mask]
-            order = np.argsort(balances, kind="stable")
-            balances, actions = balances[order], actions[order]
-            # Runs of consecutive balances (in sorted order) sharing an action.
-            breaks = np.flatnonzero(np.diff(actions)) + 1
-            for chunk_b, chunk_a in zip(np.split(balances, breaks), np.split(actions, breaks)):
-                share = len(chunk_b) / sc.matches
-                if share < min_share:
-                    continue
-                rules.append(
-                    Rule(
-                        r,
-                        describe_key(int(key), r, policy.history),
-                        float(chunk_b[0]),
-                        float(chunk_b[-1]),
-                        policy.actions[int(chunk_a[0])].label,
-                        share,
+            counts = np.bincount(step["level"][mask], minlength=len(grid))
+            reached = np.flatnonzero(counts)
+            start = int(reached[0])
+            while start <= reached[-1]:
+                end = start
+                while end + 1 < len(grid) and table[key, end + 1] == table[key, start]:
+                    end += 1
+                share = counts[start : end + 1].sum() / sc.matches
+                if share >= min_share:
+                    top = grid[end + 1] - 5 if end + 1 < len(grid) else float("inf")
+                    rules.append(
+                        Rule(
+                            r,
+                            describe_key(int(key), r, policy.history),
+                            float(grid[start]),
+                            float(top),
+                            policy.actions[int(table[key, start])].label,
+                            float(share),
+                        )
                     )
-                )
+                start = end + 1
     return rules
 
 
@@ -79,11 +97,12 @@ def render(sc: Scenarios, policy: BetPolicy, min_share: float = 0.005, title: st
     lines = [
         f"# {title}",
         "",
-        f"Estimated score {policy.expected_score:.1%} (win + {policy.rules.tie_value:.3f} x tie) "
-        f"on the {sc.matches:,} simulated matches it was fitted to.",
+        f"Scores {policy_score(sc, policy):.1%} (win + {policy.rules.tie_value:.3f} x tie) "
+        f"on {sc.matches:,} simulated matches against the modelled field.",
         "",
         f"History = {legend}, judged by your main bet only. "
-        "Balance ranges are what the strategy itself reaches; rare situations are left out.",
+        "Only situations the strategy actually reaches are listed; rare ones are left out. "
+        "If your balance falls between two lines, use the line below it.",
     ]
     for r in range(sc.rounds):
         chosen = sorted((x for x in rules if x.round_index == r), key=lambda x: -x.share)
@@ -100,3 +119,39 @@ def render(sc: Scenarios, policy: BetPolicy, min_share: float = 0.005, title: st
         lines += ["", f"\"play {name}\" changes these cells:", ""]
         lines += [f"- {line}" for line in chart_differences(chart, basic)]
     return "\n".join(lines) + "\n"
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Write the strategy card for the saved policy, measured on freshly recorded matches."""
+    import argparse
+    import os
+    from pathlib import Path
+
+    from rivals.optimize.bet_policy import build_scenarios
+    from rivals.optimize.pipeline import DEFAULT_POLICY_PATH, load_policy
+    from rivals.optimize.play_policy import styles_of
+    from rivals.optimize.population import default_population
+
+    repo = Path(__file__).resolve().parents[2]
+    parser = argparse.ArgumentParser(prog="python -m rivals.report.cheatsheet")
+    parser.add_argument("--policy", type=Path, default=DEFAULT_POLICY_PATH)
+    parser.add_argument("--matches", type=int, default=60_000)
+    parser.add_argument("--seed", type=int, default=90_000_000)
+    parser.add_argument("--processes", type=int, default=max(1, min(8, (os.cpu_count() or 2) - 1)))
+    parser.add_argument("--min-share", type=float, default=0.005)
+    parser.add_argument("--out", type=Path, default=repo / "docs" / "STRATEGY_CARD.md")
+    args = parser.parse_args(argv)
+
+    policy = load_policy(args.policy)
+    styles = styles_of(policy)  # the charts the policy was solved with, not today's defaults
+    sc = build_scenarios(
+        default_population(policy.rules), args.matches, seed=args.seed,
+        rules=policy.rules, processes=args.processes, styles=styles,
+    )
+    args.out.write_text(render(sc, policy, args.min_share))
+    print(f"wrote {args.out}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
