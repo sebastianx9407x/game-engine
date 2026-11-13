@@ -76,6 +76,9 @@ The user checked in free play: the 4-Card Total result appears only after the ha
 **D10b. A player with fewer than 10 chips is bankrupt; their match ends there.** *(confirmed 2026-11-13)*
 The user checked both cases in free play: the match ends at 0, and a balance under the 10 minimum also counts as bankrupt and cannot be bet. That confirms `allow_short_all_in=False`, and `play_round` already refuses such a bet. `match.py` (Phase 3) must stop dealing to a player once their balance is below `min_bet`. Still open: whether a bankrupt player's leftover chips (say 5) count as their final balance or as 0, which only matters when both players go bankrupt.
 
+**D10c. The match-tie rule is still unknown; `match_tie_value` stays at 0.5.** *(searched 2026-11-13)*
+A web search found no source, official or from players, on what happens when both players finish with equal balances. The only official text is the 2026-11-10 launch post, which says the higher balance wins and nothing more. Its sentence "A tie is a push, and your play comes back to you" is about one hand tying the dealer, not the match; AI search summaries misread it. The DraftKings Terms of Use and help center could not be read by automated fetch (403 and a JavaScript-only portal). Ways to settle it: the in-app rules screen, the Terms of Use in a browser, DraftKings support, or tying a free match on purpose.
+
 **D11. Shuffles are numpy PCG64 seeded with `[match_seed, round_index]`.**
 `match_shoes(seed, rules)` gives the shoes for a match. A test pins the first cards of one shuffle so a numpy upgrade cannot silently change what a seed means. These shuffles are our own; they cannot reproduce DraftKings' shuffle for a real match ID.
 
