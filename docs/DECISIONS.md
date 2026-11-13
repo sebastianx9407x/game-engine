@@ -74,6 +74,9 @@ Main bet plus side bets must fit in the balance. Doubles, splits and insurance m
 **D10a. Side bets give the player no information during the hand.** *(confirmed 2026-11-13)*
 The user checked in free play: the 4-Card Total result appears only after the hand ends, once the hole card is face up. So it cannot be used to read the dealer's hole card before acting. This matches the engine, where a policy's `DecisionContext` carries no side-bet results. Side bets stay a pure variance tool.
 
+**D10b. A player who reaches 0 chips is out; their match ends there.** *(confirmed 2026-11-13)*
+The user checked in free play. Nothing in Phase 1 changes, since `play_round` already refuses a bet with no balance. `match.py` (Phase 3) must stop dealing to a player at 0 and score them with a final balance of 0. Still open: whether a balance between 0 and 10 can be bet (`allow_short_all_in`), and how a match is scored when both players finish on 0.
+
 **D11. Shuffles are numpy PCG64 seeded with `[match_seed, round_index]`.**
 `match_shoes(seed, rules)` gives the shoes for a match. A test pins the first cards of one shuffle so a numpy upgrade cannot silently change what a seed means. These shuffles are our own; they cannot reproduce DraftKings' shuffle for a real match ID.
 
