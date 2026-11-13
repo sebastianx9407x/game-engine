@@ -52,6 +52,7 @@ class RulesConfig:
 
     # --- main-bet payouts ---
     blackjack_payout: float = 1.5
+    #: Confirmed in the app: insurance exists, costs half the stake, pays 2:1.
     insurance_offered: bool = True
     insurance_payout: float = 2.0
 
@@ -70,7 +71,8 @@ class RulesConfig:
     hit_split_aces: bool = True
     #: UNCONFIRMED. Does a two-card 21 on a split hand pay as a blackjack?
     split_21_is_blackjack: bool = False
-    #: Late surrender (first decision only, lose half the bet).
+    #: Late surrender (first decision only, lose half the bet). Confirmed in
+    #: the app: 21 Rivals has no surrender.
     surrender: bool = False
     #: Doubles, splits and insurance need spare chips to cover. Confirmed in
     #: the app for double and split: both are greyed out after an all-in bet.

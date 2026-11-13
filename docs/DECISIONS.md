@@ -56,7 +56,7 @@ Blackjack at 3:2 on an odd bet and insurance at half the bet both produce half c
 | `side_bet_min` | `10` | Same minimum as the main bet. |
 | `require_balance_for_extra_bets` | `True` | No longer a guess for double and split: the user confirmed (2026-11-13) both are greyed out after betting the whole balance. Assumed to apply to insurance too. |
 | `dealer_peeks` | `True` | From the plan. With `False`, a dealer blackjack takes doubled and split bets too. |
-| `surrender` | `False` | From the plan. When on, it is late surrender on the first decision. |
+| `surrender` | `False` | No longer a guess: the user confirmed (2026-11-13) there is no surrender. |
 
 `side_bet_max` is no longer a guess. The user confirmed in the app (2026-11-13) that side bets have no cap besides the balance and need not be proportional to the main bet: 600 on a side bet next to a 10 main bet is accepted. Side bets are therefore a full-size variance tool, e.g. most of the stack on 4-Card Total at 10:1.
 
@@ -100,3 +100,7 @@ The research also found a public development build of the game client. It is a d
 - **A timeout leaves a balance of 0**, so running out the clock is the same as going bankrupt.
 - **Chip denominations are 5, 10, 25, 100, 500, 1000, with 25 selected by default.** Bets are built by tapping chips, so bets are multiples of 5, and odd multiples of 5 produce half chips on a blackjack (D7).
 - **REPLAY** repeats the last round's bets and **PLAY 2x** doubles them, which makes flat betting and doubling-up the lowest-effort choices.
+
+## Rules read from the app by the user (2026-11-13)
+
+These match the engine defaults and are no longer guesses: insurance is offered, costs half the stake and pays 2:1; there is no surrender; a 21 on the first two cards pays 3:2; Perfect Pairs is on the player's first two cards and pays 6:1 mixed, 12:1 same color, 25:1 perfect; 4-Card Total is the player's first two cards plus the dealer's first two cards, paying 2:1 on 36–37 and 8:1 on 38–39. The user typed the 40+ payout as "1 to 1"; the launch article says 10:1 and the engine keeps 10:1 pending their confirmation.
