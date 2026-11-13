@@ -1,0 +1,6 @@
+match_id,date,mode,entry_fee,hand,my_bet,my_pairs_bet,my_total_bet,my_cards,dealer_cards,my_actions,my_net,opp_net,notes
+1,2026-11-13,free,0,1,,,,,,,100,250,
+1,2026-11-13,free,0,2,,,,,,,-100,-250,
+1,2026-11-13,free,0,3,,,,,,,0,0,
+1,2026-11-13,free,0,4,,,,,,,-100,-250,
+1,2026-11-13,free,0,5,,,,,,,-25,-700,opponent had 750 before this hand and finished on 50

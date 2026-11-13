@@ -112,6 +112,18 @@ The user read it in the app's rules, along with "Maximum one split per hand" (al
 - Double after split still applies when the split hand totals 9, 10 or 11.
 - The research's "missed soft double" errors no longer exist (`research/archetypes.md` §4.7).
 
-## The opponent's final balance is shown after a match (2026-11-13)
+## The results screen shows the opponent's net result on every hand (2026-11-13)
 
-The user confirmed the results screen shows the opponent's final balance, alongside a chart. This is the calibration data the research asked for (`research/archetypes.md` §8): every logged match gives one real sample of where an opponent finished, which constrains the bet-style shares directly. What the chart shows is not yet known; if it plots each player's balance hand by hand, it reveals the opponent's bet sizes and results too. `data/hand_log.csv` (Phase 5) should have a per-match row with both final balances, plus whatever the chart adds.
+The user sent a screenshot of the MATCH STATS screen. It shows both final balances, a timeline of both balances, and for each of the five hands the net chips won or lost by each player. That is far more than a final balance: it is the opponent's whole bet path.
+
+What a per-hand net tells us about the opponent's bet:
+- a loss of X means a bet of X, or X/2 doubled or split
+- a win of X means a bet of X, or X/1.5 on a blackjack, or X/2 doubled
+- a 0 is a push and hides the bet
+- side bets are folded into the same number
+
+Because the first two player cards and the dealer's first two are shared, the user's own hand usually tells which case applies (a blackjack, a push, a dealer blackjack).
+
+First logged match: the user went +100, −100, 0, −100, −25 and finished on 875; the opponent went +250, −250, 0, −250, −700 and finished on 50. Read plainly, the opponent bet 250 flat, then put 700 of their remaining 750 on the last hand. That is the "Closer" pattern from `research/archetypes.md` on top of a flat-mid base. One match is an anecdote, not evidence.
+
+`data/hand_log.csv` is the log (one row per hand, format in `data/README.md`), created now instead of in Phase 5 so real matches are captured from the start. No usernames go in it, since the repo is on GitHub. The research's calibration method (§8) assumed only final balances; with per-hand nets, calibration can score each archetype against the opponent's full five-hand path. Phase 3's archetype models should therefore be able to report the likelihood of an observed sequence of per-hand nets, given the shared cards where they were logged.
