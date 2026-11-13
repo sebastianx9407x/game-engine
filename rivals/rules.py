@@ -22,7 +22,10 @@ class RulesConfig:
     #: be bet, so the match is over for that player. True would instead let
     #: them bet everything they have left.
     allow_short_all_in: bool = False
-    #: UNCONFIRMED. Value of a match that ends with equal balances.
+    #: Value of a match that ends with equal balances, on a scale where a
+    #: loss is 0 and a win is 1. Confirmed in the app: a tie refunds the entry
+    #: fee, so the exact value is entry fee / prize. That is 0.5 when the
+    #: prize is twice the entry fee and higher when DraftKings keeps a cut.
     match_tie_value: float = 0.5
 
     # --- shoe ---
