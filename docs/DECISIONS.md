@@ -51,7 +51,7 @@ Blackjack at 3:2 on an odd bet and insurance at half the bet both produce half c
 |---|---|---|
 | `split_by_value` | `True` | K-Q can split. Usual for online blackjack. |
 | `split_deal_both_first` | `False` | Second split hand gets its card when its turn starts (casino procedure). Changes which card lands where, not the odds. |
-| `double_totals` | `None` (any two cards) | The user reported doubling on any first two cards. The rules text in a development build of the game client says "Double available when player shows 9, 10 or 11" (see `research/archetypes.md` §1.2). The flag was added so either can be modeled; set it to `(9, 10, 11)` if a soft or hard-8 double is refused in the app. |
+| `double_totals` | `(9, 10, 11)` | No longer a guess: the user read the rule in the app (2026-11-13), "Double available when player shows 9, 10 or 11", matching the dev client build. The plan's "double on any first two cards" was wrong. Still open: a soft hand counts by its best total here, so ace-8 (shown as 9/19) cannot double; check in the app. |
 | `split_21_is_blackjack` | `False` | Ace-ten after a split pays 1:1. Standard. |
 | `side_bet_min` | `10` | Same minimum as the main bet. |
 | `require_balance_for_extra_bets` | `True` | No longer a guess for double and split: the user confirmed (2026-11-13) both are greyed out after betting the whole balance. Assumed to apply to insurance too. |
@@ -104,3 +104,10 @@ The research also found a public development build of the game client. It is a d
 ## Rules read from the app by the user (2026-11-13)
 
 These match the engine defaults and are no longer guesses: insurance is offered, costs half the stake and pays 2:1; there is no surrender; a 21 on the first two cards pays 3:2; Perfect Pairs is on the player's first two cards and pays 6:1 mixed, 12:1 same color, 25:1 perfect; 4-Card Total is the player's first two cards plus the dealer's first two cards, paying 2:1 on 36–37 and 8:1 on 38–39. The user typed the 40+ payout as "1 to 1"; the launch article says 10:1 and the engine keeps 10:1 pending their confirmation.
+
+## Doubling is limited to 9, 10 or 11 (2026-11-13)
+
+The user read it in the app's rules, along with "Maximum one split per hand" (already the default). `double_totals` now defaults to `(9, 10, 11)`; `None` restores any-two-cards. Effects:
+- No soft doubles and no doubling 8 or less, so the Phase 2 basic strategy chart will differ from the published 6D S17 DAS chart in the soft-hand rows, and the house edge is a little higher than the plan's 0.4–0.5% reference. Validate the solver against the published chart with `double_totals=None`, then report the restricted chart.
+- Double after split still applies when the split hand totals 9, 10 or 11.
+- The research's "missed soft double" errors no longer exist (`research/archetypes.md` §4.7).

@@ -31,11 +31,13 @@ def test_hand_value(text, total, soft):
 
 
 def test_first_decision_on_an_ordinary_hand():
-    assert legal_actions(hand("Ts 6d"), DEFAULT_RULES) == (S, H, D)
+    assert legal_actions(hand("Ts 6d"), DEFAULT_RULES) == (S, H)
+    assert legal_actions(hand("6s 5d"), DEFAULT_RULES) == (S, H, D)
 
 
 def test_pairs_can_split():
-    assert legal_actions(hand("8s 8d"), DEFAULT_RULES) == (S, H, D, P)
+    assert legal_actions(hand("8s 8d"), DEFAULT_RULES) == (S, H, P)
+    assert legal_actions(hand("5s 5d"), DEFAULT_RULES) == (S, H, D, P)
 
 
 def test_no_double_or_split_after_a_hit():
@@ -62,21 +64,19 @@ def test_double_after_split_follows_the_rule():
 
 
 def test_double_and_split_need_chips_to_cover():
-    assert legal_actions(hand("8s 8d", bet=100), DEFAULT_RULES, bankroll=99) == (S, H)
-    assert legal_actions(hand("8s 8d", bet=100), DEFAULT_RULES, bankroll=100) == (S, H, D, P)
+    assert legal_actions(hand("5s 5d", bet=100), DEFAULT_RULES, bankroll=99) == (S, H)
+    assert legal_actions(hand("5s 5d", bet=100), DEFAULT_RULES, bankroll=100) == (S, H, D, P)
     lenient = DEFAULT_RULES.with_(require_balance_for_extra_bets=False)
-    assert legal_actions(hand("8s 8d", bet=100), lenient, bankroll=0) == (S, H, D, P)
+    assert legal_actions(hand("5s 5d", bet=100), lenient, bankroll=0) == (S, H, D, P)
 
 
-def test_double_can_be_limited_to_certain_totals():
-    restricted = DEFAULT_RULES.with_(double_totals=(9, 10, 11))
+def test_double_only_on_nine_ten_or_eleven():
+    any_two = DEFAULT_RULES.with_(double_totals=None)
     for text in ["5s 4d", "6s 4d", "6s 5d"]:
-        assert D in legal_actions(hand(text), restricted)
-    for text in ["5s 3d", "7s 5d", "As 7d", "Ts 9d"]:  # 8, 12, soft 18, 19
         assert D in legal_actions(hand(text), DEFAULT_RULES)
-        assert D not in legal_actions(hand(text), restricted)
-    assert legal_actions(hand("5s 5d"), restricted) == (S, H, D, P)
-    assert legal_actions(hand("8s 8d"), restricted) == (S, H, P)
+    for text in ["5s 3d", "7s 5d", "As 7d", "As 8d", "Ts 9d"]:  # 8, 12, soft 18, soft 19, 19
+        assert D not in legal_actions(hand(text), DEFAULT_RULES)
+        assert D in legal_actions(hand(text), any_two)
 
 
 def test_mixed_ten_value_cards_split_only_when_allowed():
@@ -86,9 +86,10 @@ def test_mixed_ten_value_cards_split_only_when_allowed():
     assert P in legal_actions(hand("Ks Kd"), strict)
 
 
-def test_split_aces_can_be_hit_and_doubled_by_default():
+def test_split_aces_can_be_hit_by_default():
     aces = hand("As 5d", from_split=True)
-    assert legal_actions(aces, DEFAULT_RULES, num_hands=2) == (S, H, D)
+    assert legal_actions(aces, DEFAULT_RULES, num_hands=2) == (S, H)
+    assert legal_actions(aces, DEFAULT_RULES.with_(double_totals=None), num_hands=2) == (S, H, D)
     assert legal_actions(aces, DEFAULT_RULES.with_(hit_split_aces=False), num_hands=2) == ()
 
 

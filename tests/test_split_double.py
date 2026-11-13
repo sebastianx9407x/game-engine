@@ -38,18 +38,24 @@ def test_double_push_returns_everything():
     assert result.net == 0
 
 
-def test_double_is_allowed_on_any_first_two_cards():
-    for player in ["2s 3d", "Ts 9d", "As 9d", "7s 7d"]:
+def test_double_is_only_offered_on_nine_ten_or_eleven():
+    for player in ["5s 4d", "6s 4d", "6s 5d", "5s 5d"]:
         _, policy = play(player, "Tc 8h", [S])
         assert D in policy.legal_seen[0]
-
-
-def test_double_restricted_to_nine_ten_eleven_when_configured():
-    restricted = DEFAULT_RULES.with_(double_totals=(9, 10, 11))
-    result, _ = play("6s 5d", "Tc 8h", [D], player_draws="9h", rules=restricted)
-    assert result.net == 20
+    for player in ["2s 3d", "5s 3d", "7s 5d", "As 7d", "7s 7d"]:
+        _, policy = play(player, "Tc 8h", [S])
+        assert D not in policy.legal_seen[0]
     with pytest.raises(IllegalActionError):
-        play("As 7d", "Tc 8h", [D], player_draws="2h", rules=restricted)
+        play("As 7d", "Tc 8h", [D], player_draws="2h")
+
+
+def test_double_on_any_two_cards_when_configured():
+    any_two = DEFAULT_RULES.with_(double_totals=None)
+    for player in ["2s 3d", "Ts 9d", "As 7d", "7s 7d"]:
+        _, policy = play(player, "Tc 8h", [S], rules=any_two)
+        assert D in policy.legal_seen[0]
+    result, _ = play("As 7d", "Tc 8h", [D], player_draws="2h", rules=any_two)
+    assert result.net == 20  # soft 18 + 2 = 20 beats 18
 
 
 def test_double_is_not_allowed_after_a_hit():
@@ -138,11 +144,11 @@ def test_split_needs_chips_to_cover():
 
 
 def test_double_after_split():
-    result, policy = play("8s 8h", "Tc 7h", [P, D, S], player_draws="3d Kc Td", bet=10)
-    assert cards_of(result) == hands("8s 3d Kc", "8h Td")
+    result, policy = play("8s 8h", "Tc 7h", [P, D, S], player_draws="3d Kc 2d", bet=10)
+    assert cards_of(result) == hands("8s 3d Kc", "8h 2d")
     assert [h.bet for h in result.hands] == [20, 10]
     assert [h.doubled for h in result.hands] == [True, False]
-    assert result.net == 30
+    assert result.net == 10  # doubled 21 wins 20, the 10 loses to 17
     assert D in policy.legal_seen[1] and D in policy.legal_seen[2]
 
 
