@@ -103,7 +103,7 @@ The research also found a public development build of the game client. It is a d
 
 ## Rules read from the app by the user (2026-11-13)
 
-These match the engine defaults and are no longer guesses: insurance is offered, costs half the stake and pays 2:1; there is no surrender; a 21 on the first two cards pays 3:2; Perfect Pairs is on the player's first two cards and pays 6:1 mixed, 12:1 same color, 25:1 perfect; 4-Card Total is the player's first two cards plus the dealer's first two cards, paying 2:1 on 36–37 and 8:1 on 38–39. The user typed the 40+ payout as "1 to 1"; the launch article says 10:1 and the engine keeps 10:1 pending their confirmation.
+These match the engine defaults and are no longer guesses: insurance is offered, costs half the stake and pays 2:1; there is no surrender; a 21 on the first two cards pays 3:2; Perfect Pairs is on the player's first two cards and pays 6:1 mixed, 12:1 same color, 25:1 perfect; 4-Card Total is the player's first two cards plus the dealer's first two cards, paying 2:1 on 36–37 and 8:1 on 38–39. A total of 40 or more pays 10:1 (the user confirmed this after first typing "1 to 1").
 
 ## Doubling is limited to 9, 10 or 11 (2026-11-13)
 
@@ -111,3 +111,7 @@ The user read it in the app's rules, along with "Maximum one split per hand" (al
 - No soft doubles and no doubling 8 or less, so the Phase 2 basic strategy chart will differ from the published 6D S17 DAS chart in the soft-hand rows, and the house edge is a little higher than the plan's 0.4–0.5% reference. Validate the solver against the published chart with `double_totals=None`, then report the restricted chart.
 - Double after split still applies when the split hand totals 9, 10 or 11.
 - The research's "missed soft double" errors no longer exist (`research/archetypes.md` §4.7).
+
+## The opponent's final balance is shown after a match (2026-11-13)
+
+The user confirmed the results screen shows the opponent's final balance, alongside a chart. This is the calibration data the research asked for (`research/archetypes.md` §8): every logged match gives one real sample of where an opponent finished, which constrains the bet-style shares directly. What the chart shows is not yet known; if it plots each player's balance hand by hand, it reveals the opponent's bet sizes and results too. `data/hand_log.csv` (Phase 5) should have a per-match row with both final balances, plus whatever the chart adds.
