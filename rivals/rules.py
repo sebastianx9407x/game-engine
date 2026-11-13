@@ -68,8 +68,10 @@ class RulesConfig:
     mixed_pair_payout: float = 6
     #: (minimum total, payout) pairs, highest threshold first.
     four_card_total_payouts: tuple[tuple[int, float], ...] = ((40, 10), (38, 8), (36, 2))
-    #: UNCONFIRMED. Limits on each side bet; a max of None means the balance.
+    #: UNCONFIRMED. Smallest side bet.
     side_bet_min: float = 10
+    #: Confirmed in the app: no cap besides the balance, and a side bet may be
+    #: far larger than the main bet (600 on a side bet next to a 10 main bet).
     side_bet_max: float | None = None
 
     def __post_init__(self) -> None:

@@ -45,12 +45,12 @@ Blackjack at 3:2 on an odd bet and insurance at half the bet both produce half c
 | `split_deal_both_first` | `False` | Second split hand gets its card when its turn starts (casino procedure). Changes which card lands where, not the odds. |
 | `split_21_is_blackjack` | `False` | Ace-ten after a split pays 1:1. Standard. |
 | `allow_short_all_in` | `False` | A balance below 10 cannot be bet. |
-| `side_bet_min` / `side_bet_max` | `10` / `None` | Same minimum as the main bet, capped only by balance. |
+| `side_bet_min` | `10` | Same minimum as the main bet. |
 | `require_balance_for_extra_bets` | `True` | From the plan. Also applies to insurance. |
 | `dealer_peeks` | `True` | From the plan. With `False`, a dealer blackjack takes doubled and split bets too. |
 | `surrender` | `False` | From the plan. When on, it is late surrender on the first decision. |
 
-`side_bet_max` deserves an early check in the app. If a player really can put most of the stack on 4-Card Total at 10:1, side bets are a much bigger variance tool than if they are capped.
+`side_bet_max` is no longer a guess. The user confirmed in the app (2026-11-13) that side bets have no cap besides the balance and need not be proportional to the main bet: 600 on a side bet next to a 10 main bet is accepted. Side bets are therefore a full-size variance tool, e.g. most of the stack on 4-Card Total at 10:1.
 
 **D9. Total wagers are checked against the balance up front, and extras against what is left.**
 Main bet plus side bets must fit in the balance. Doubles, splits and insurance must fit in what remains after everything already staked that round. So a player who bets everything cannot double or split, which is a real strategic cost of going all-in and is now modeled.
