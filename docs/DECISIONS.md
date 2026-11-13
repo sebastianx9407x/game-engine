@@ -228,3 +228,26 @@ Fixed after the review:
 - `PolicyAgent` silently played basic strategy if a policy used a play style without carrying its chart. It now raises. The card command records matches with the policy's own charts.
 
 Measured, not changed: the split distribution's mean differs from the split EV by at most 0.002 units at six decks (0.007 at one deck), and its standard deviation is within 0.4%.
+
+## First optimizer result (2026-11-13)
+
+Fitted on 100,000 matches against the default population, 80,000 held out. Saved as `tactics/optimized_policy.pkl`; the card is `docs/STRATEGY_CARD.md`.
+
+| History mode | Fitted | Held out (selection half) |
+|---|---|---|
+| pattern | 0.6633 | 0.6604 |
+| count | 0.6624 | 0.6606 |
+| none | 0.6568 | 0.6561 |
+
+`count` was chosen and scores 0.6594 on the 40,000 untouched matches. Knowing the shared history is worth about half a point over ignoring it; the exact order of wins and losses adds nothing over the counts.
+
+Through the real engine on 60,000 fresh matches (`python -m rivals.evaluate tactics/optimized.py`): win 65.6%, tie 0.8%, loss 33.6%, score 66.0% ± 0.4, profit +0.188 per $1 of entry. On the same matches flat-min scores 54.3%, flat-100 55.2% and the template 56.7%.
+
+By opponent bet style, the score ranges from 79% against flat-min bettors down to 55.5% against Protectors and 49.4% against Tacticians (the contest-aware 4% of the field). It is above 62% against every other style.
+
+What the strategy does, in words: open with 150; after a loss raise to 300, and after two losses to 500; once ahead, drop to 25–50 and sit on the lead. It wins small in most matches and loses big in a few, which is what maximising win probability (not chips) rewards when most opponents bet small and finish near 1,000. Side bets appear only as a last resort from a short stack. The seek and avoid play styles are used often, but the review and notebook 02 both show their effect is small.
+
+Caveats:
+- Everything here is measured against the modelled field. The population shares are low-confidence priors until real MATCH STATS screens are logged.
+- The card has about 190 lines, too many to memorise. A simplified card that keeps most of the score is the next step.
+- The strategy is weakest against opponents who reason the same way. `robust.py` (Phase 5) should measure how it does against best responses to itself.
