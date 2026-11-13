@@ -22,11 +22,13 @@ class RulesConfig:
     #: be bet, so the match is over for that player. True would instead let
     #: them bet everything they have left.
     allow_short_all_in: bool = False
+    #: Prize paid to the winner, as a multiple of the entry fee. Confirmed in
+    #: the app: DraftKings keeps 10% of the pot ($1 entry pays $1.80, $5 pays $9).
+    prize_multiple: float = 1.8
     #: Value of a match that ends with equal balances, on a scale where a
     #: loss is 0 and a win is 1. Confirmed in the app: a tie refunds the entry
-    #: fee, so the exact value is entry fee / prize. That is 0.5 when the
-    #: prize is twice the entry fee and higher when DraftKings keeps a cut.
-    match_tie_value: float = 0.5
+    #: fee, which is worth 1 / prize_multiple = 5/9 of a win.
+    match_tie_value: float = 1 / 1.8
 
     # --- shoe ---
     #: UNCONFIRMED (DraftKings says 6).

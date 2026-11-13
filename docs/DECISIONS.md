@@ -76,10 +76,14 @@ The user checked in free play: the 4-Card Total result appears only after the ha
 **D10b. A player with fewer than 10 chips is bankrupt; their match ends there.** *(confirmed 2026-11-13)*
 The user checked both cases in free play: the match ends at 0, and a balance under the 10 minimum also counts as bankrupt and cannot be bet. That confirms `allow_short_all_in=False`, and `play_round` already refuses such a bet. `match.py` (Phase 3) must stop dealing to a player once their balance is below `min_bet`. Still open: whether a bankrupt player's leftover chips (say 5) count as their final balance or as 0, which only matters when both players go bankrupt.
 
-**D10c. A tied match refunds the entry fee.** *(confirmed by the user 2026-11-13)*
-The user reports that in practice a tie returns the entry fee. On the scale the optimizer uses (loss = 0, win = 1), a refund is worth `entry fee / prize`. That is exactly 0.5 if the prize is twice the entry fee, and more than 0.5 if DraftKings keeps a cut: with a 10 entry and an 18 prize, a tie is worth 10/18 = 0.56. The user has confirmed DraftKings does keep a cut (the winner does not receive the whole pot), so the true value is above 0.5. `match_tie_value` stays at 0.5 only until the real entry-fee and prize pairs are known; then set it per prize tier. A higher tie value makes mirroring the typical opponent (and so tying) more attractive relative to gambling for a win.
+**D10c. A tied match refunds the entry fee, and the winner gets 1.8× the entry fee.** *(confirmed by the user 2026-11-13)*
+DraftKings keeps 10% of the pot: a $1 entry pays $1.80, a $5 entry pays $9, and so on. A tie returns the entry fee. `RulesConfig` now has `prize_multiple = 1.8`, and `match_tie_value` changed from the plan's 0.5 to 1/1.8 = 5/9 ≈ 0.556, which is what a refund is worth on the optimizer's scale (loss = 0, win = 1).
 
-For the record, a web search the same day found no written source for this rule. The launch post's "A tie is a push, and your play comes back to you" is about one hand tying the dealer, not the match.
+Consequences:
+- The objective is P(win) + (5/9)·P(tie), not P(win) + 0.5·P(tie). Tying is worth slightly more than a coin flip, so mirroring the typical opponent is a slightly better fallback than the plan assumed.
+- Break-even: in entry-fee units a win is +0.8, a loss is −1 and a tie is 0. A strategy makes money only if it wins more than 5/9 = 55.6% of the matches that don't tie.
+
+For the record, a web search the same day found no written source for the tie rule. The launch post's "A tie is a push, and your play comes back to you" is about one hand tying the dealer, not the match.
 
 **D11. Shuffles are numpy PCG64 seeded with `[match_seed, round_index]`.**
 `match_shoes(seed, rules)` gives the shoes for a match. A test pins the first cards of one shuffle so a numpy upgrade cannot silently change what a seed means. These shuffles are our own; they cannot reproduce DraftKings' shuffle for a real match ID.
