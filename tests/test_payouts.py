@@ -124,6 +124,13 @@ def test_dealer_blackjack_under_a_ten_takes_both_split_bets():
     assert result.net == -20
 
 
+def test_ace_ten_after_a_split_still_loses_to_a_dealer_blackjack_under_a_ten():
+    result, _ = play("As Ad", "Kc Ah", [P, S, S], player_draws="Td 9c", bet=10)
+    assert result.hands[0].total == 21
+    assert [h.outcome for h in result.hands] == [Outcome.LOSE, Outcome.LOSE]
+    assert result.net == -20
+
+
 def test_peek_under_a_ten_when_configured():
     peeking = DEFAULT_RULES.with_(dealer_peeks_on_ten=True)
     shoe = Shoe.stacked("6s 5d", "Kc Ah")

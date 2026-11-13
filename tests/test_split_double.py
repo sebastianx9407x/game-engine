@@ -5,6 +5,7 @@ from rivals.cards import parse_cards
 from rivals.hand import Action
 from rivals.resolve import IllegalActionError, Outcome
 from rivals.rules import DEFAULT_RULES
+from rivals.side_bets import SideBets
 
 S, H, D, P = Action.STAND, Action.HIT, Action.DOUBLE, Action.SPLIT
 
@@ -77,10 +78,21 @@ def test_double_needs_chips_to_cover():
     assert result.net == 200
 
 
-def test_side_bets_and_insurance_reduce_what_is_left_to_double_with():
-    # 100 main + 5 insurance leaves 95 of 200: not enough to double.
+def test_insurance_reduces_what_is_left_to_double_with():
+    # 100 main + 50 insurance leaves 50 of 200: not enough to double.
     with pytest.raises(IllegalActionError):
         play("6s 5d", "Ac 8h", [D], player_draws="9h", bet=100, balance=200, insurance=True)
+
+
+def test_side_bets_reduce_what_is_left_to_double_or_split_with():
+    # 100 main + 5 side bet leaves 95 of 200: not enough to double or split.
+    with pytest.raises(IllegalActionError):
+        play("6s 5d", "Tc 8h", [D], bet=100, balance=200, side_bets=SideBets(5, 0))
+    with pytest.raises(IllegalActionError):
+        play("8s 8h", "Tc 8h", [P], bet=100, balance=200, side_bets=SideBets(0, 5))
+    result, _ = play("6s 5d", "Tc 8h", [D], player_draws="9h", bet=100, balance=205,
+                     side_bets=SideBets(5, 0))
+    assert result.main_net == 200
 
 
 # --- split ------------------------------------------------------------------

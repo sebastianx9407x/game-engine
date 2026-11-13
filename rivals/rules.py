@@ -26,9 +26,10 @@ class RulesConfig:
     #: the app: DraftKings keeps 10% of the pot ($1 entry pays $1.80, $5 pays $9).
     prize_multiple: float = 1.8
     #: Value of a match that ends with equal balances, on a scale where a
-    #: loss is 0 and a win is 1. Confirmed in the app: a tie refunds the entry
-    #: fee, which is worth 1 / prize_multiple = 5/9 of a win.
-    match_tie_value: float = 1 / 1.8
+    #: loss is 0 and a win is 1. None means a tie refunds the entry fee
+    #: (confirmed in the app), which is worth 1 / prize_multiple = 5/9 of a
+    #: win. Read it through `tie_value`.
+    match_tie_value: float | None = None
 
     # --- shoe ---
     #: UNCONFIRMED (DraftKings says 6).
@@ -112,6 +113,13 @@ class RulesConfig:
         thresholds = [t for t, _ in self.four_card_total_payouts]
         if thresholds != sorted(thresholds, reverse=True):
             raise ValueError("four_card_total_payouts must be sorted highest threshold first")
+
+    @property
+    def tie_value(self) -> float:
+        """Value of a tied match between a loss (0) and a win (1)."""
+        if self.match_tie_value is not None:
+            return self.match_tie_value
+        return 1 / self.prize_multiple
 
     def with_(self, **changes) -> RulesConfig:
         """Copy of these rules with some fields changed."""

@@ -36,7 +36,9 @@ def test_default_rules_match_the_published_game():
     assert (r.starting_chips, r.num_rounds, r.min_bet, r.max_bet) == (1000, 5, 10, None)
     assert r.num_decks == 6
     assert r.prize_multiple == 1.8
-    assert r.match_tie_value == pytest.approx(5 / 9)  # a tie refunds the entry fee
+    assert r.tie_value == pytest.approx(5 / 9)  # a tie refunds the entry fee
+    assert r.with_(prize_multiple=2.0).tie_value == 0.5
+    assert r.with_(match_tie_value=0.4).tie_value == 0.4
     assert not r.dealer_hits_soft_17
     assert (r.blackjack_payout, r.insurance_payout) == (1.5, 2.0)
     assert r.max_splits == 1 and r.double_after_split and r.hit_split_aces

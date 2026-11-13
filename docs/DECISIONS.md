@@ -141,3 +141,51 @@ The plan's single "dealer peeks: yes" is therefore split into `dealer_peeks_on_a
 
 - **A bankrupt player keeps their leftover chips as their final balance.** So 5 beats 0, and two bankrupt players tie only if they hold the same amount. This is the user's call, not something seen in the app. `match.py` (Phase 3) should compare final balances as they stand and apply no special bankruptcy rule.
 - **Six decks, freshly shuffled every round.** DraftKings' launch post says "the same six-deck shoe order in each of the five rounds", and the engine deals each round from a new shoe. A round uses at most a dozen or so of the 312 cards, so six decks behaves almost like an endless supply; the one place the count shows is Perfect Pairs (a perfect pair is impossible with one deck, 1.6% with six, 1.9% with an endless supply). The user's video recorder will log every card with its suit into `data/hand_log.csv`, and `infer_decks.py` (Phase 5) will use those cards to test the count against six.
+
+## Phase 1 review by Opus (2026-11-13)
+
+An Opus reviewer compared `play_round` against its own independent re-implementation over 200,000 random rounds (mixed deck counts, balances, side bets, insurance, both shoe models) and found no mismatch, no correctness bug and no rule mismatch. Acted on:
+- Two test gaps closed (side bets reducing the chips left to double or split; ace-ten after a split losing to a hidden dealer blackjack) and one misleading test renamed.
+- `match_tie_value` no longer hard-codes 5/9. It defaults to `None`, meaning "a tie is a refund", and `rules.tie_value` returns `1 / prize_multiple` unless a value is set.
+
+Noted, not acted on yet:
+- `DecisionContext` hands policies the live `Hand` objects. A policy that mutated them would corrupt the round. Agents are trusted for now.
+- Shuffling a 312-card shoe costs more than playing the round. If a fast kernel is written it must either reproduce `rng.permutation` or redefine what a seed means (`test_shuffle_is_pinned` guards this).
+- Still unconfirmed in the app: whether a player who is all-in can take even money on a blackjack (the engine says no, since insurance needs spare chips).
+
+## Phase 2 (solver)
+
+**S1. Pure Python and numpy, no numba.** `rivals/solver/exact.py` solves a whole rule set in about 6 seconds, fast enough that numba was not needed. `solver_for(rules)` and `basic_chart(rules)` cache per process.
+
+**S2. What is exact.** Stand, hit and double values are exact for the cards left in the shoe, including the dealer's blackjack check: with a checked ace up, both the dealer's results and the player's next card are conditioned on the hole card not being a ten; with a ten up there is no check, so dealer blackjack is a live result that beats everything, doubles included. Tests check this against brute-force enumeration with exact fractions.
+
+**S3. What is approximate: splits.** A split is valued as two hands that each start from the pair card with the other pair card removed. The EV ignores what one split hand learns from the other's cards. The distribution of the two-hand total (−4 to +4 units) treats the two hands as independent given the dealer's result, which keeps the important correlation (both hands face the same dealer) and drops the small card-removal one. Simulated rounds agree with both to within noise.
+
+**S4. The solver takes an optional fixed strategy.** `Solver(rules, strategy=chart)` gives the exact value of playing a chart, or any rule of thumb, instead of the best play. Phase 3 can use this to price a human's mistakes exactly.
+
+**S5. Not modeled by the solver:** surrender, blackjack after a split, and resplitting. It raises `NotImplementedError` for those rule settings. None applies to 21 Rivals.
+
+**S6. `basic.py` builds a total-dependent chart**, averaging over the two-card hands that make each total. `BasicStrategy` plays it through `play_round`.
+
+### Results
+
+| Rules | House edge, best play | House edge, chart | Std of one round |
+|---|---|---|---|
+| Textbook (double any two cards, check under a ten, one card to split aces) | 0.457% | 0.460% | 1.147 |
+| 21 Rivals as confirmed | 0.473% | 0.476% | 1.105 |
+
+- Under textbook rules the derived chart is identical, cell for cell, to the published 6-deck S17 DAS chart, and the edge sits where the literature puts it for no resplitting.
+- Under 21 Rivals rules the chart changes in three places: hit 11 against a ten (no double), do not split 8s against a ten, and no soft doubles at all (ace-8 and ace-9 may double but standing is better). Being able to hit split aces roughly cancels what the double restriction and the missing check under a ten cost.
+- 16 million simulated rounds of the chart through `play_round` gave −0.501% ± 0.028% against the exact −0.476% (0.9 standard errors), and the simulated distribution of round results matches the exact one to four decimal places at every value from −4 to +4.
+
+## Phase 3 groundwork (agents and matches)
+
+**M1. `Agent` (in `rivals/agents/base.py`) has `bet`, `side_bets`, `act`, `take_insurance` and `reset`.** The base class bets the minimum and plays basic strategy, so a tactic overrides only what it changes. Each decision receives a `MatchState`: round index, balance, and the player's own earlier rounds. It never contains anything about the opponent, because the game is blind.
+
+**M2. Illegal bets raise an error.** A tactic that bets more than its balance fails loudly instead of being silently clamped; `state.clamp_bet()` is there for tactics that want clamping.
+
+**M3. `match.py` plays both agents on the same shoes** and `simulate()` runs many matches, optionally across processes. Match `i` always uses seed `seed + i`, so two tactics simulated with the same seed face the same cards and the same opponents, which removes most of the noise from comparing them. Each agent gets its own random stream, so two copies of a random strategy are two different people.
+
+**M4. Speed.** About 270 µs per match on one core in pure Python (3,700 matches per second), so a million matches takes under a minute on eight cores. That is enough for Phase 3. Whether Phase 4 needs a compiled kernel depends on how many matches the optimizer wants.
+
+**M5. A bankrupt player keeps their leftover chips**, as agreed: 5 beats 0.
