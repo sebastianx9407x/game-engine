@@ -189,3 +189,29 @@ Noted, not acted on yet:
 **M4. Speed.** About 270 µs per match on one core in pure Python (3,700 matches per second), so a million matches takes under a minute on eight cores. That is enough for Phase 3. Whether Phase 4 needs a compiled kernel depends on how many matches the optimizer wants.
 
 **M5. A bankrupt player keeps their leftover chips**, as agreed: 5 beats 0.
+
+## Phase 3 (evaluator and tactics)
+
+**E1. `python -m rivals.evaluate tactics/file.py`** scores a tactic against the field: win, tie and loss rates with confidence intervals, the score, profit per $1 of entry fee, the same split by opponent type, and a comparison with the flat-minimum basic-strategy player. `--vs other.py` plays it against one specific tactic instead, and `--baseline other.py` adds more comparisons.
+
+**E2. Comparisons are paired.** The tactic and each baseline play exactly the same matches (same shoes, same opponents with the same random streams), and the reported gain is the average per-match difference. That cuts the noise several-fold compared with two independent runs.
+
+**E3. A tactic file defines one `Agent` subclass** (called `Tactic`, or the only one in the file). `tactics/_template.py` is the starting point; `tactics/flat_100.py` is a reference bettor.
+
+## Phase 4 (optimizer)
+
+**O1. The search exploits the blind format.** Because neither player sees the other and both get the same shoes, an opponent's result on a given match does not depend on what we do. So `build_scenarios` records each match once: what one unit would have won us each round (for every play style and for 1 to 4 bets' worth of chips available), what each side bet would have paid, and where sampled opponents finished. Trying a bet schedule is then arithmetic on arrays, with no cards dealt. This is why no compiled kernel was needed: recording 100,000 matches takes well under a minute and each candidate schedule is scored in milliseconds.
+
+**O2. Backward induction over (hand, shared history, balance).** `solve_bet_policy` starts at hand 5 and works back. For each situation it tries every bet on every recorded match in that situation, plays the remaining hands with the choices already fixed, and keeps the best average score. The plan's "approximate DP with Monte Carlo rollouts" is this, with the rollouts being the recorded matches.
+
+**O3. Shared history comes in three resolutions**, and the pipeline keeps whichever scores best on held-out matches: `pattern` (the exact win/loss/push sequence so far), `count` (how many wins and losses), `none`. A history seen in fewer than 300 recorded matches falls back to the no-history choice so rare patterns are not fitted to noise.
+
+**O4. Bets are a ladder plus side-bet plays.** Main bets of 10, 25, 50, 100, 150, 200, 300, 400, 500, 750, 1000, half the stack and all-in; and a minimum main bet with 50, 100, 200, 400, half the rest or all the rest on either side bet. All amounts are multiples of 5, matching the app's chips. The plan's ladder was shorter and had no side-bet entries.
+
+**O5. Play styles replace the plan's "deviation tables keyed on estimated lead".** A `seek` chart and an `avoid` chart are built like basic strategy but take the most (or least) volatile action whose EV is within 0.03 units of the best. Each main bet can be combined with either, and the search decides where they help, so "estimated lead" is not hand-coded: it is whatever the balance and history imply. Measured effect on a single round is small (standard deviation 1.137 and 1.097 against basic's 1.105, each costing about 0.07% of a bet), so bet size and side bets are the real variance tools; the styles matter mainly because playing differently from the opponent also changes the dealer's cards.
+
+**O6. Honest scoring.** The fitted score flatters the policy, so `optimize()` also scores it on matches it never saw, and the final check is `python -m rivals.evaluate tactics/optimized.py`, which plays it through the real round engine on a third set of matches.
+
+**O7. `rivals/report/cheatsheet.py`** (Phase 5, brought forward) lists only the situations the policy actually reaches, merges neighbouring balances with the same instruction, and orders them by how often they occur.
+
+**O8. Known limit.** The agent judges "win, loss or push" from its own main-bet result, while the search used the result a basic-strategy player with spare chips would have had. They differ in under 1% of matches (a hand the player could not afford to double or split).
