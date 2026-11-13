@@ -136,3 +136,8 @@ The plan's single "dealer peeks: yes" is therefore split into `dealer_peeks_on_a
 - Against a ten, doubling and splitting carry extra risk: about 1 time in 13 the hole card is an ace and the whole doubled or split stake is lost. Expect the Phase 2 chart to hit, not double, 11 against a ten, and to be more cautious splitting against a ten. This is the usual pattern for games without a hole-card check.
 - The house edge rises a little further from the plan's 0.4–0.5% reference. Validate the solver against the published 6D S17 DAS chart with `dealer_peeks_on_ten=True` and `double_totals=None`, then report the real rules.
 - The shared-card logic is unchanged: both players face the same hidden ace, so a player who doubles into it loses more than one who just hits.
+
+## Working assumptions agreed with the user (2026-11-13)
+
+- **A bankrupt player keeps their leftover chips as their final balance.** So 5 beats 0, and two bankrupt players tie only if they hold the same amount. This is the user's call, not something seen in the app. `match.py` (Phase 3) should compare final balances as they stand and apply no special bankruptcy rule.
+- **Six decks, freshly shuffled every round.** DraftKings' launch post says "the same six-deck shoe order in each of the five rounds", and the engine deals each round from a new shoe. A round uses at most a dozen or so of the 312 cards, so six decks behaves almost like an endless supply; the one place the count shows is Perfect Pairs (a perfect pair is impossible with one deck, 1.6% with six, 1.9% with an endless supply). No further checking is planned. Cards logged by the recorder will flag it if the count is clearly not six.
