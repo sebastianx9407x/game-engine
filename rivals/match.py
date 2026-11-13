@@ -190,24 +190,29 @@ class SimulationResult:
     total: Tally = field(default_factory=Tally)
     #: The same counts split by the opponent's label.
     by_opponent: dict[str, Tally] = field(default_factory=dict)
+    #: Outcome of every match in seed order (+1 win, 0 tie, -1 loss), if kept.
+    outcomes: list[int] = field(default_factory=list)
 
-    def add(self, opponent_label: str, result: MatchResult) -> None:
+    def add(self, opponent_label: str, result: MatchResult, keep_outcome: bool = False) -> None:
         self.total.add(result)
         self.by_opponent.setdefault(opponent_label, Tally()).add(result)
+        if keep_outcome:
+            self.outcomes.append(result.outcome)
 
     def merge(self, other: SimulationResult) -> None:
         self.total.merge(other.total)
         for label, tally in other.by_opponent.items():
             self.by_opponent.setdefault(label, Tally()).merge(tally)
+        self.outcomes.extend(other.outcomes)
 
 
 def _run_block(args) -> SimulationResult:
-    make_agent, make_opponent, seeds, rules = args
+    make_agent, make_opponent, seeds, rules, keep_outcomes = args
     out = SimulationResult()
     for seed in seeds:
         agent = make_agent(random.Random(f"{seed}:make-a"))
         opponent = make_opponent(random.Random(f"{seed}:make-b"))
-        out.add(opponent.label, play_match(agent, opponent, seed, rules))
+        out.add(opponent.label, play_match(agent, opponent, seed, rules), keep_outcomes)
     return out
 
 
@@ -219,23 +224,26 @@ def simulate(
     seed: int = 0,
     rules: RulesConfig = DEFAULT_RULES,
     processes: int = 1,
+    keep_outcomes: bool = False,
 ) -> SimulationResult:
     """Play ``matches`` matches of ``make_agent`` against ``make_opponent``.
 
     Match ``i`` uses match seed ``seed + i``, so two strategies simulated with
     the same seed face the same cards and the same opponents' random streams,
-    which makes their results directly comparable. With ``processes > 1`` the
-    factories must be picklable (module-level functions or classes).
+    which makes their results directly comparable; ``keep_outcomes`` records
+    each match's outcome in seed order for such paired comparisons. With
+    ``processes > 1`` the factories must be picklable (module-level functions
+    or classes).
     """
     seeds = range(seed, seed + matches)
     if processes <= 1:
-        return _run_block((make_agent, make_opponent, seeds, rules))
+        return _run_block((make_agent, make_opponent, seeds, rules, keep_outcomes))
     block = math.ceil(matches / (processes * 4))
     blocks = [seeds[i : i + block] for i in range(0, matches, block)]
     out = SimulationResult()
     charts: list[Chart] = [basic_chart(rules)]
     with get_context("spawn").Pool(processes, initializer=prime_charts, initargs=(charts,)) as pool:
-        jobs = [(make_agent, make_opponent, b, rules) for b in blocks]
-        for part in pool.imap_unordered(_run_block, jobs):
+        jobs = [(make_agent, make_opponent, b, rules, keep_outcomes) for b in blocks]
+        for part in pool.map(_run_block, jobs):
             out.merge(part)
     return out

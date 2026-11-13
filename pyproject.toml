@@ -15,6 +15,12 @@ dependencies = [
 dev = [
     "pytest>=8",
 ]
+notebooks = [
+    "ipykernel",
+    "matplotlib",
+    "nbconvert",
+    "pandas",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["rivals"]
