@@ -27,10 +27,12 @@ class RulesConfig:
     # --- shoe ---
     #: UNCONFIRMED (DraftKings says 6).
     num_decks: int = 6
-    #: UNCONFIRMED. True: the dealer's draws come from their own end of the
-    #: shoe, so the dealer's hand never depends on how many cards the player
-    #: took. False: one sequential shoe, dealer draws after the player.
-    dealer_cards_independent: bool = True
+    #: UNCONFIRMED. False: one sequential shoe. The dealer's two starting
+    #: cards are the same for both players, but the dealer draws after the
+    #: player, so every card a player takes shifts what the dealer draws.
+    #: True: the dealer's draws come from their own end of the shoe, so the
+    #: dealer's whole hand never depends on what the player did.
+    dealer_cards_independent: bool = False
     #: UNCONFIRMED. After a split, True deals a second card to both hands
     #: straight away; False deals the second hand's card when its turn starts.
     split_deal_both_first: bool = False

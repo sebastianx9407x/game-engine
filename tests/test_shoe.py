@@ -76,7 +76,7 @@ def test_dealer_draws_follow_the_player_when_sequential():
 
 def test_cursor_never_deals_a_card_twice():
     shoe = Shoe(parse_cards("As Kd 5h 7c 9s"))
-    cur = shoe.cursor()
+    cur = shoe.cursor(dealer_independent=True)
     dealt = [cur.next(), cur.next(), cur.next_dealer(), cur.next(), cur.next_dealer()]
     assert sorted(dealt) == sorted(shoe.cards.tolist())
     with pytest.raises(ShoeExhausted):
@@ -86,8 +86,8 @@ def test_cursor_never_deals_a_card_twice():
 
 
 def test_stacked_layout():
-    shoe = Shoe.stacked("As Kd", "9c 7h", "2s 3s", "4d 5d")
+    sequential = Shoe.stacked("As Kd", "9c 7h", "2s 3s", "4d 5d")
+    assert sequential.cards[:8].tolist() == parse_cards("As 9c Kd 7h 2s 3s 4d 5d")
+    shoe = Shoe.stacked("As Kd", "9c 7h", "2s 3s", "4d 5d", dealer_independent=True)
     assert shoe.cards[:6].tolist() == parse_cards("As 9c Kd 7h 2s 3s")
     assert shoe.cards[-2:].tolist() == parse_cards("5d 4d")
-    sequential = Shoe.stacked("As Kd", "9c 7h", "2s 3s", "4d 5d", dealer_independent=False)
-    assert sequential.cards[:8].tolist() == parse_cards("As 9c Kd 7h 2s 3s 4d 5d")

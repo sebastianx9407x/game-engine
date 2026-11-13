@@ -18,13 +18,22 @@ Phase 1 has no hot loop. It gets added in the phase that first uses it, so the i
 **D3. A `Shoe` is immutable; each player deals through their own `ShoeCursor`.**
 The plan describes `shoe.py` as "deterministic dealer vs player card streams". Rather than a shoe object that tracks its own position, the shoe is a frozen card order and `play_round` opens a fresh cursor on it. Both players in a match are handed the same `Shoe` object, and one player's round cannot disturb the other's. `shoe.cards` is a read-only `uint8` array, ready for a compiled kernel later.
 
-**D4. Dealer draws come off the back of the shoe.**
-The plan's default is "dealer cards fixed regardless of player draws". To get that from one physical shoe (so the composition stays right for every deck count):
-- initial deal off the front: player, dealer upcard, player, dealer hole card
+**D4. One sequential shoe by default; the dealer draws after the player.** *(default flipped 2026-11-13)*
+The plan's default was "dealer cards fixed regardless of player draws". The default is now the opposite:
+- initial deal off the front of the shoe: player, dealer upcard, player, dealer hole card
 - player draws continue from the front
-- dealer draws come off the back
+- dealer draws continue from the front, after whatever the player took
 
-The dealer's whole hand is then a function of the shoe alone. `RulesConfig.dealer_cards_independent=False` switches to the other reading of DraftKings' wording (one sequential shoe, dealer draws after the player), where the two players' dealers can end up with different hands. Both are tested. Which one the real game uses is still unconfirmed and matters a lot for strategy, so it is worth checking in free play: play the same match as someone else, hit a different number of times, and compare the dealer's draws.
+Both players always face the same upcard and hole card. But a player who hits, doubles or splits uses up cards, so the dealer's draws can differ between the two players, and the dealer can bust for one and make a hand for the other.
+
+Why it changed: the user found an online answer saying that in 21 Rivals "hitting, splitting, or doubling down uses up cards from the shoe and changes which cards the dealer eventually draws". This is also the most literal reading of DraftKings' "same six-deck shoe order". The evidence is weak, though: the answer reads like an AI summary, not a DraftKings page, and a web search found no primary source. The flag stays marked UNCONFIRMED.
+
+`RulesConfig.dealer_cards_independent=True` restores the plan's model, where dealer draws come off the back of the shoe and the dealer's whole hand is a function of the shoe alone. Both models are tested.
+
+What this means for later phases:
+- Phase 2 (solver): nothing. The EV and outcome distribution of a single player's decision are identical under both models.
+- Phase 3–4 (matches, optimizer): it matters. Under the sequential shoe, playing a hand differently from the opponent also re-rolls the dealer's result, so play deviations create more divergence than under the fixed-dealer model. Headline results should be reported under both until the app settles it.
+- To settle it in free play: two people play the same match, one stands and one hits without busting on a hand where the dealer must draw, then compare the dealer's drawn cards.
 
 **D5. `resolve.py` defines a small `Policy` protocol (`act`, `take_insurance`), not the full `Agent`.**
 The plan's `Agent` (`bet`, `side_bets`, `act`) belongs to Phase 3 with `match.py`. A round only needs play decisions, so `play_round(shoe, policy, bet, side_bets, balance=, rules=)` takes the wagers as arguments. A Phase 3 `Agent` satisfies `Policy` by having those two methods. Policies receive a `DecisionContext` (hand, upcard, legal actions, hand index, all hands, spare chips, rules). `ScriptedPolicy` ships in the package because replaying logged hands needs it too.
@@ -59,7 +68,7 @@ Main bet plus side bets must fit in the balance. Doubles, splits and insurance m
 - A hand that reaches 21 stands automatically.
 - Insurance is half the main bet, offered only against an ace, and also covers "even money" on a player blackjack.
 - The dealer peeks under both an ace and a ten.
-- The dealer draws only if the player has a hand that can still win. If the player busts everything, `dealer_cards` is just the two starting cards. Players who diverged can therefore see different amounts of the dealer's hand, but never different cards.
+- The dealer draws only if the player has a hand that can still win. If the player busts everything, `dealer_cards` is just the two starting cards. Under the sequential shoe (D4) players who diverged can also see different dealer draws.
 - The upcard is the first dealer card dealt, the hole card the second.
 
 **D11. Shuffles are numpy PCG64 seeded with `[match_seed, round_index]`.**

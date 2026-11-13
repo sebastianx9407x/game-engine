@@ -9,9 +9,10 @@ Dealing layout (see docs/DECISIONS.md):
 * The initial deal comes off the front: player, dealer upcard, player, dealer
   hole card.
 * Player draws continue from the front.
-* Dealer draws come off the back when ``dealer_independent`` is True, which
-  makes the dealer's whole hand a function of the shoe alone. When False they
-  continue from the front, after whatever the player took.
+* Dealer draws also continue from the front, after whatever the player took
+  (``dealer_independent`` False, the default). When it is True they come off
+  the back instead, which makes the dealer's whole hand a function of the shoe
+  alone.
 """
 
 from __future__ import annotations
@@ -60,7 +61,7 @@ class Shoe:
         player_draws: str | Iterable[int | str] = (),
         dealer_draws: str | Iterable[int | str] = (),
         *,
-        dealer_independent: bool = True,
+        dealer_independent: bool = False,
         size: int = DECK_SIZE,
         filler: int | str = "2c",
     ) -> Shoe:
@@ -85,7 +86,7 @@ class Shoe:
         padding = max(0, size - len(front) - len(back))
         return cls(front + [fill] * padding + back)
 
-    def cursor(self, dealer_independent: bool = True) -> ShoeCursor:
+    def cursor(self, dealer_independent: bool = False) -> ShoeCursor:
         """A fresh dealing position at the top of this shoe."""
         return ShoeCursor(self, dealer_independent)
 
@@ -107,7 +108,7 @@ class ShoeCursor:
 
     __slots__ = ("_seq", "_front", "_back", "_independent")
 
-    def __init__(self, shoe: Shoe, dealer_independent: bool = True) -> None:
+    def __init__(self, shoe: Shoe, dealer_independent: bool = False) -> None:
         self._seq = shoe._seq
         self._front = 0
         self._back = len(self._seq) - 1
