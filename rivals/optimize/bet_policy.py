@@ -265,6 +265,8 @@ class BetPolicy:
     #: Estimated score from each situation, same shape as `tables`.
     values: list[np.ndarray] = field(default_factory=list)
     style_names: tuple[str, ...] = ("basic",)
+    #: Play chart for each style index; None means basic strategy.
+    style_charts: tuple = (None,)
 
     def level(self, balance: float) -> int:
         return max(int(np.searchsorted(self.grid, balance, side="right")) - 1, 0)
@@ -415,3 +417,25 @@ def policy_finals(sc: Scenarios, policy: BetPolicy) -> np.ndarray:
     keys = [history_keys(cats, r, policy.history) for r in range(sc.rounds)]
     start = np.full(sc.matches, sc.rules.starting_chips, dtype=np.float64)
     return _finish(sc, arr, policy, keys, np.arange(sc.matches), 0, start)
+
+
+def policy_trace(sc: Scenarios, policy: BetPolicy) -> list[dict[str, np.ndarray]]:
+    """What the policy did on each recorded match, round by round.
+
+    One dict per round with, per match: ``alive`` (still had the minimum
+    bet), ``key`` (shared-history key), ``balance`` before betting, and the
+    ``action`` index chosen.
+    """
+    arr = _Arrays(policy.actions)
+    cats = sc.categories()
+    rows = np.arange(sc.matches)
+    balance = np.full(sc.matches, sc.rules.starting_chips, dtype=np.float64)
+    trace = []
+    for r in range(sc.rounds):
+        key = history_keys(cats, r, policy.history)
+        alive = balance >= sc.rules.min_bet
+        level = np.maximum(np.searchsorted(policy.grid, balance, side="right") - 1, 0)
+        act = policy.tables[r][key, level]
+        trace.append({"alive": alive, "key": key, "balance": balance.copy(), "action": act})
+        balance = np.where(alive, _play(sc, arr, rows, r, balance, act), balance)
+    return trace

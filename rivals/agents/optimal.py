@@ -6,17 +6,16 @@ from rivals.agents.base import Agent, MatchState
 from rivals.hand import Action
 from rivals.resolve import DecisionContext
 from rivals.side_bets import SideBets
+from rivals.solver.exact import value_index
 
 
 class PolicyAgent(Agent):
     """Bets by a `BetPolicy` table and plays the style the table picks for each round."""
 
-    def __init__(self, policy, name: str = "optimized", styles=None) -> None:
+    def __init__(self, policy, name: str = "optimized") -> None:
         super().__init__()
         self.policy = policy
         self.name = name
-        #: Play policies by style index; None plays basic strategy for every style.
-        self.styles = styles
         self._action = None
 
     def history_key(self, state: MatchState) -> int:
@@ -41,16 +40,21 @@ class PolicyAgent(Agent):
         return SideBets(float(pairs), float(total))
 
     def act(self, ctx: DecisionContext, state: MatchState) -> Action:
-        if self.styles is None or self._action.style == 0:
+        charts = self.policy.style_charts
+        style = self._action.style
+        chart = charts[style] if style < len(charts) else None
+        if chart is None:
             return self.basic_action(ctx)
-        return self.styles[self._action.style].act(ctx)
+        hand = ctx.hand
+        pair = value_index(hand.cards[0]) if Action.SPLIT in ctx.legal else None
+        return chart.action(hand.total, hand.is_soft, pair, value_index(ctx.upcard), ctx.legal)
 
 
 class PolicyAgentFactory:
     """Picklable factory for `simulate` and `evaluate`."""
 
-    def __init__(self, policy, name: str = "optimized", styles=None) -> None:
-        self.policy, self.label, self.styles = policy, name, styles
+    def __init__(self, policy, name: str = "optimized") -> None:
+        self.policy, self.label = policy, name
 
     def __call__(self, rng) -> PolicyAgent:
-        return PolicyAgent(self.policy, self.label, self.styles)
+        return PolicyAgent(self.policy, self.label)

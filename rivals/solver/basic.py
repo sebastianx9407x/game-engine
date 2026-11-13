@@ -7,6 +7,7 @@ is soft and whether it is a pair, not at the individual cards.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from rivals.hand import Action
@@ -104,8 +105,20 @@ def _two_card_hands(total: int, soft: bool) -> list[tuple[int, int]]:
     return non_pairs or hands
 
 
-def derive_chart(solver: Solver) -> Chart:
-    """Build the chart from a solver that plays every decision optimally."""
+#: Picks an action from {action: (ev, std)}.
+Selector = Callable[[dict[Action, tuple[float, float]]], Action]
+
+
+def _highest_ev(options: dict[Action, tuple[float, float]]) -> Action:
+    return max(options, key=lambda a: options[a][0])
+
+
+def derive_chart(solver: Solver, select: Selector = _highest_ev) -> Chart:
+    """Build a chart from a solver that plays every decision optimally.
+
+    ``select`` decides each cell from the EV and standard deviation of every
+    action; the default takes the highest EV, which gives basic strategy.
+    """
     if solver.strategy is not None:
         raise ValueError("derive the chart from a solver without a fixed strategy")
     full = solver.full
@@ -113,37 +126,45 @@ def derive_chart(solver: Solver) -> Chart:
     soft: dict[tuple[int, int], Cell] = {}
     split: dict[tuple[int, int], bool] = {}
 
+    def summarise(hands: list[tuple[int, int]], up: int) -> dict[Action, tuple[float, float]]:
+        """EV and std of each action, averaged over ``hands`` by how often each is dealt."""
+        first: dict[Action, float] = {}
+        second: dict[Action, float] = {}
+        weight_sum = 0.0
+        for a, b in hands:
+            shoe = list(full)
+            shoe[up] -= 1
+            weight = shoe[a] * (shoe[b] - (a == b)) * (1 if a == b else 2)
+            if weight <= 0:
+                continue
+            result = solver.evaluate_counts(counts_of([a, b]), up)
+            weight_sum += weight
+            for action, value in result.actions.items():
+                first[action] = first.get(action, 0.0) + weight * value.ev
+                moment = sum(x * x * p for x, p in value.dist.items())
+                second[action] = second.get(action, 0.0) + weight * moment
+        out = {}
+        for action, total in first.items():
+            ev = total / weight_sum
+            out[action] = (ev, max(second[action] / weight_sum - ev * ev, 0.0) ** 0.5)
+        return out
+
     for up in range(NUM_VALUES):
         for is_soft, totals, table in ((False, HARD_TOTALS, hard), (True, SOFT_TOTALS, soft)):
             for total in totals:
-                # Average each action's EV over the two-card hands with this
-                # total, weighted by how often each is dealt.
-                evs: dict[Action, float] = {}
-                weight_sum = 0.0
-                for a, b in _two_card_hands(total, is_soft):
-                    shoe = list(full)
-                    shoe[up] -= 1
-                    weight = shoe[a] * (shoe[b] - (a == b)) * (1 if a == b else 2)
-                    if weight <= 0:
-                        continue
-                    result = solver.evaluate_counts(counts_of([a, b]), up)
-                    weight_sum += weight
-                    for action, value in result.actions.items():
-                        if action != Action.SPLIT:
-                            evs[action] = evs.get(action, 0.0) + weight * value.ev
-                if not weight_sum:  # cannot be dealt from this shoe
+                options = summarise(_two_card_hands(total, is_soft), up)
+                options.pop(Action.SPLIT, None)
+                if not options:  # cannot be dealt from this shoe
                     table[(total, up)] = Cell(Action.STAND, Action.STAND)
                     continue
-                first = max(evs, key=evs.get)
-                fallback = Action.HIT if evs[Action.HIT] > evs[Action.STAND] else Action.STAND
-                table[(total, up)] = Cell(first, fallback)
+                fallback = select({a: options[a] for a in (Action.STAND, Action.HIT)})
+                table[(total, up)] = Cell(select(options), fallback)
         for pair in range(NUM_VALUES):
-            hand = counts_of([pair, pair])
             if full[pair] - (pair == up) < 2:
                 split[(pair, up)] = False
                 continue
-            result = solver.evaluate_counts(hand, up)
-            split[(pair, up)] = result.best == Action.SPLIT
+            options = summarise([(pair, pair)], up)
+            split[(pair, up)] = Action.SPLIT in options and select(options) == Action.SPLIT
     return Chart(solver.rules, hard, soft, split)
 
 
