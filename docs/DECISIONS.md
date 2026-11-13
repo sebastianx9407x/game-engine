@@ -71,6 +71,9 @@ Main bet plus side bets must fit in the balance. Doubles, splits and insurance m
 - The dealer draws only if the player has a hand that can still win. If the player busts everything, `dealer_cards` is just the two starting cards. Under the sequential shoe (D4) players who diverged can also see different dealer draws.
 - The upcard is the first dealer card dealt, the hole card the second.
 
+**D10a. Side bets give the player no information during the hand.** *(confirmed 2026-11-13)*
+The user checked in free play: the 4-Card Total result appears only after the hand ends, once the hole card is face up. So it cannot be used to read the dealer's hole card before acting. This matches the engine, where a policy's `DecisionContext` carries no side-bet results. Side bets stay a pure variance tool.
+
 **D11. Shuffles are numpy PCG64 seeded with `[match_seed, round_index]`.**
 `match_shoes(seed, rules)` gives the shoes for a match. A test pins the first cards of one shuffle so a numpy upgrade cannot silently change what a seed means. These shuffles are our own; they cannot reproduce DraftKings' shuffle for a real match ID.
 
