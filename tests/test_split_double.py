@@ -96,21 +96,23 @@ def test_split_plays_two_hands_with_the_original_bet_each():
 
 def test_split_hands_settle_separately():
     # First hand busts, second beats the dealer's 17.
-    result, _ = play("8s 8h", "Tc 7h", [P, H, S], player_draws="5d Kc Ts")
+    result, _ = play("8s 8h", "Tc 7h", [P, H, S], player_draws="5d Ts Kc")
     assert cards_of(result) == hands("8s 5d Kc", "8h Ts")
     assert [h.outcome for h in result.hands] == [Outcome.BUST, Outcome.WIN]
     assert result.net == 0
 
 
-def test_second_split_hand_gets_its_card_when_its_turn_starts():
+def test_both_split_hands_get_their_second_card_straight_away():
     result, _ = play("8s 8h", "Tc 7h", [P, H, S, S], player_draws="2d 3c Ts")
-    assert cards_of(result) == hands("8s 2d 3c", "8h Ts")
-
-
-def test_both_split_hands_can_be_dealt_up_front():
-    both_first = DEFAULT_RULES.with_(split_deal_both_first=True)
-    result, _ = play("8s 8h", "Tc 7h", [P, H, S, S], player_draws="2d 3c Ts", rules=both_first)
     assert cards_of(result) == hands("8s 2d Ts", "8h 3c")
+
+
+def test_second_split_hand_can_wait_for_its_card_when_configured():
+    one_at_a_time = DEFAULT_RULES.with_(split_deal_both_first=False)
+    result, _ = play(
+        "8s 8h", "Tc 7h", [P, H, S, S], player_draws="2d 3c Ts", rules=one_at_a_time
+    )
+    assert cards_of(result) == hands("8s 2d 3c", "8h Ts")
 
 
 def test_only_one_split_is_allowed():
@@ -124,7 +126,7 @@ def test_only_one_split_is_allowed():
 
 def test_resplit_when_configured():
     resplit = DEFAULT_RULES.with_(max_splits=2)
-    result, _ = play("8s 8h", "Tc 7h", [P, P, S, S, S], player_draws="8d Ts Th Td", rules=resplit)
+    result, _ = play("8s 8h", "Tc 7h", [P, P, S, S, S], player_draws="8d Td Ts Th", rules=resplit)
     assert cards_of(result) == hands("8s Ts", "8d Th", "8h Td")
     assert result.net == 30
 
@@ -151,7 +153,7 @@ def test_split_needs_chips_to_cover():
 
 
 def test_double_after_split():
-    result, policy = play("8s 8h", "Tc 7h", [P, D, S], player_draws="3d Kc 2d", bet=10)
+    result, policy = play("8s 8h", "Tc 7h", [P, D, S], player_draws="3d 2d Kc", bet=10)
     assert cards_of(result) == hands("8s 3d Kc", "8h 2d")
     assert [h.bet for h in result.hands] == [20, 10]
     assert [h.doubled for h in result.hands] == [True, False]
@@ -168,14 +170,14 @@ def test_double_after_split_can_be_switched_off():
 def test_chips_run_out_across_split_and_double():
     # 30 chips: 10 bet, 10 to split, 10 to double the first hand, none for the second.
     _, policy = play(
-        "8s 8h", "Tc 7h", [P, D, S], player_draws="3d Kc 3c", bet=10, balance=30
+        "8s 8h", "Tc 7h", [P, D, S], player_draws="3d 3c Kc", bet=10, balance=30
     )
     assert D in policy.legal_seen[1]
     assert D not in policy.legal_seen[2]
 
 
 def test_split_aces_can_be_hit():
-    result, policy = play("As Ah", "Tc 7h", [P, H, S, S], player_draws="5d 4c 6s")
+    result, policy = play("As Ah", "Tc 7h", [P, H, S, S], player_draws="5d 6s 4c")
     assert cards_of(result) == hands("As 5d 4c", "Ah 6s")
     assert H in policy.legal_seen[1]
     assert [h.total for h in result.hands] == [20, 17]
@@ -208,7 +210,7 @@ def test_21_after_a_split_can_pay_as_blackjack_when_configured():
 
 def test_dealer_still_draws_when_one_split_hand_survives():
     result, _ = play(
-        "8s 8h", "Tc 6h", [P, H, S], player_draws="5d Kc Ts", dealer_draws="Kd"
+        "8s 8h", "Tc 6h", [P, H, S], player_draws="5d Ts Kc", dealer_draws="Kd"
     )
     assert result.dealer_cards == tuple(parse_cards("Tc 6h Kd"))
     assert cards_of(result) == hands("8s 5d Kc", "8h Ts")
@@ -217,7 +219,7 @@ def test_dealer_still_draws_when_one_split_hand_survives():
 
 def test_dealer_does_not_draw_when_every_split_hand_busts():
     result, _ = play(
-        "8s 8h", "Tc 6h", [P, H, H], player_draws="5d Kc 6s Ks", dealer_draws="Kd"
+        "8s 8h", "Tc 6h", [P, H, H], player_draws="5d 6s Kc Ks", dealer_draws="Kd"
     )
     assert result.dealer_cards == tuple(parse_cards("Tc 6h"))
     assert cards_of(result) == hands("8s 5d Kc", "8h 6s Ks")

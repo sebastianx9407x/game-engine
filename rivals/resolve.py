@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Protocol
 
-from rivals.cards import VALUE
+from rivals.cards import ACE, RANK
 from rivals.hand import Action, Hand, hand_value, insurance_available, is_natural, legal_actions
 from rivals.rules import DEFAULT_RULES, RulesConfig
 from rivals.shoe import Shoe, ShoeCursor
@@ -209,7 +209,8 @@ def play_round(
         insurance_net = -insurance_bet
 
     dealer_cards = [upcard, hole]
-    round_over = player_blackjack or (dealer_blackjack and rules.dealer_peeks)
+    peeks = rules.dealer_peeks_on_ace if RANK[upcard] == ACE else rules.dealer_peeks_on_ten
+    round_over = player_blackjack or (dealer_blackjack and peeks)
 
     if not round_over:
         bankroll = _play_player_hands(hands, upcard, cursor, policy, bankroll, rules, actions)

@@ -41,6 +41,9 @@ def test_default_rules_match_the_published_game():
     assert (r.blackjack_payout, r.insurance_payout) == (1.5, 2.0)
     assert r.max_splits == 1 and r.double_after_split and r.hit_split_aces
     assert r.double_totals == (9, 10, 11)
+    assert r.dealer_peeks_on_ace and not r.dealer_peeks_on_ten
+    assert r.split_deal_both_first and r.split_by_value and not r.split_21_is_blackjack
+    assert r.side_bet_min == 5
     assert not r.surrender
     assert (r.perfect_pair_payout, r.colored_pair_payout, r.mixed_pair_payout) == (25, 12, 6)
     assert r.four_card_total_payouts == ((40, 10), (38, 8), (36, 2))

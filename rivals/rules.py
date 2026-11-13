@@ -39,16 +39,22 @@ class RulesConfig:
     #: True: the dealer's draws come from their own end of the shoe, so the
     #: dealer's whole hand never depends on what the player did.
     dealer_cards_independent: bool = False
-    #: UNCONFIRMED. After a split, True deals a second card to both hands
-    #: straight away; False deals the second hand's card when its turn starts.
-    split_deal_both_first: bool = False
+    #: After a split, True deals a second card to both hands straight away;
+    #: False deals the second hand's card when its turn starts. Confirmed in
+    #: the app: both hands get their card straight away.
+    split_deal_both_first: bool = True
 
     # --- dealer ---
     dealer_hits_soft_17: bool = False
-    #: UNCONFIRMED. Dealer checks for blackjack (ace or ten up) before the
-    #: player acts. If False, a dealer blackjack takes every bet on the table,
-    #: doubles and splits included.
-    dealer_peeks: bool = True
+    #: With an ace showing, the dealer checks for blackjack after the insurance
+    #: decision, and a dealer blackjack ends the hand before the player acts.
+    #: The user reports this is how the app behaves.
+    dealer_peeks_on_ace: bool = True
+    #: With a ten-value card showing, does the dealer check for an ace
+    #: underneath before the player acts? Confirmed in the app: no. The player
+    #: can still double and split, and a dealer blackjack then takes every bet
+    #: on the table, doubles and splits included.
+    dealer_peeks_on_ten: bool = False
 
     # --- main-bet payouts ---
     #: Confirmed in the app: paid exactly, so odd bets produce half chips.

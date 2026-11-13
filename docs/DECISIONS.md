@@ -50,12 +50,12 @@ Blackjack at 3:2 on an odd bet and insurance at half the bet both produce half c
 | Flag | Default | Why this default |
 |---|---|---|
 | `split_by_value` | `True` | No longer a guess: the user confirmed (2026-11-13) that 10, J, Q and K all split with each other. |
-| `split_deal_both_first` | `False` | Second split hand gets its card when its turn starts (casino procedure). Changes which card lands where, not the odds. |
+| `split_deal_both_first` | `True` | No longer a guess: the user confirmed (2026-11-13) that after a split both hands get their second card straight away. The first default (`False`, casino procedure) was wrong. Changes which card lands where, not the odds. |
 | `double_totals` | `(9, 10, 11)` | No longer a guess: the user read the rule in the app (2026-11-13), "Double available when player shows 9, 10 or 11". Either total of a soft hand counts: the user doubled an ace-8 (shown as 9/19), so ace-8 and ace-9 can double. The plan's "double on any first two cards" was wrong. |
 | `split_21_is_blackjack` | `False` | No longer a guess: the user confirmed (2026-11-13) that ace-ten after a split pays 1:1. |
 | `side_bet_min` | `5` | No longer a guess: the user confirmed (2026-11-13) the smallest side bet is 5. |
 | `require_balance_for_extra_bets` | `True` | No longer a guess for double and split: the user confirmed (2026-11-13) both are greyed out after betting the whole balance. Assumed to apply to insurance too. |
-| `dealer_peeks` | `True` | From the plan. With `False`, a dealer blackjack takes doubled and split bets too. |
+| `dealer_peeks_on_ace` / `dealer_peeks_on_ten` | `True` / `False` | Replaces the plan's single "dealer peeks: yes". See "The dealer does not check under a ten" below. |
 | `surrender` | `False` | No longer a guess: the user confirmed (2026-11-13) there is no surrender. |
 
 `side_bet_max` is no longer a guess. The user confirmed in the app (2026-11-13) that side bets have no cap besides the balance and need not be proportional to the main bet: 600 on a side bet next to a 10 main bet is accepted. Side bets are therefore a full-size variance tool, e.g. most of the stack on 4-Card Total at 10:1.
@@ -66,7 +66,7 @@ Main bet plus side bets must fit in the balance. Doubles, splits and insurance m
 **D10. Round procedure details.**
 - A hand that reaches 21 stands automatically.
 - Insurance is half the main bet, offered only against an ace, and also covers "even money" on a player blackjack.
-- The dealer peeks under both an ace and a ten.
+- The dealer peeks under an ace only (see "The dealer does not check under a ten" below).
 - The dealer draws only if the player has a hand that can still win. If the player busts everything, `dealer_cards` is just the two starting cards. Under the sequential shoe (D4) players who diverged can also see different dealer draws.
 - The upcard is the first dealer card dealt, the hole card the second.
 
@@ -127,3 +127,12 @@ Because the first two player cards and the dealer's first two are shared, the us
 First logged match: the user went +100, −100, 0, −100, −25 and finished on 875; the opponent went +250, −250, 0, −250, −700 and finished on 50. Read plainly, the opponent bet 250 flat, then put 700 of their remaining 750 on the last hand. That is the "Closer" pattern from `research/archetypes.md` on top of a flat-mid base. One match is an anecdote, not evidence.
 
 `data/hand_log.csv` is the log (one row per hand, format in `data/README.md`), created now instead of in Phase 5 so real matches are captured from the start. No usernames go in it, since the repo is on GitHub. The research's calibration method (§8) assumed only final balances; with per-hand nets, calibration can score each archetype against the opponent's full five-hand path. Phase 3's archetype models should therefore be able to report the likelihood of an observed sequence of per-hand nets, given the shared cards where they were logged.
+
+## The dealer does not check under a ten (2026-11-13)
+
+The user confirmed in the app: when the dealer shows a ten-value card with an ace underneath, the hand does not end at once. The player can still double and split, and then loses every bet on the table to the blackjack. With an ace showing, the app asks about insurance and the user reports the blackjack is resolved immediately.
+
+The plan's single "dealer peeks: yes" is therefore split into `dealer_peeks_on_ace = True` and `dealer_peeks_on_ten = False`. Effects:
+- Against a ten, doubling and splitting carry extra risk: about 1 time in 13 the hole card is an ace and the whole doubled or split stake is lost. Expect the Phase 2 chart to hit, not double, 11 against a ten, and to be more cautious splitting against a ten. This is the usual pattern for games without a hole-card check.
+- The house edge rises a little further from the plan's 0.4–0.5% reference. Validate the solver against the published 6D S17 DAS chart with `dealer_peeks_on_ten=True` and `double_totals=None`, then report the real rules.
+- The shared-card logic is unchanged: both players face the same hidden ace, so a player who doubles into it loses more than one who just hits.

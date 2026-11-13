@@ -96,13 +96,39 @@ def test_blackjack_payout_is_configurable():
 # --- dealer blackjack and insurance -----------------------------------------
 
 
-@pytest.mark.parametrize("dealer", ["Kc Ah", "Ac Kh"])
-def test_dealer_blackjack_ends_the_round_before_the_player_acts(dealer):
-    shoe = Shoe.stacked("Ts 9d", dealer)
+def test_dealer_blackjack_under_an_ace_ends_the_round_before_the_player_acts():
+    shoe = Shoe.stacked("Ts 9d", "Ac Kh")
     result = play_round(shoe, NeverAsked(), 10)
     assert result.dealer_blackjack
     assert result.net == -10
     assert result.actions == ()
+
+
+def test_dealer_blackjack_under_a_ten_is_not_revealed_until_the_player_has_acted():
+    result, policy = play("Ts 9d", "Kc Ah", [S])
+    assert len(policy.legal_seen) == 1  # the player got to act
+    assert result.dealer_blackjack
+    assert result.dealer_cards == tuple(parse_cards("Kc Ah"))
+    assert result.net == -10
+
+
+def test_dealer_blackjack_under_a_ten_takes_doubled_bets():
+    result, _ = play("6s 5d", "Kc Ah", [D], player_draws="Th", bet=10)
+    assert result.hands[0].total == 21
+    assert result.net == -20
+
+
+def test_dealer_blackjack_under_a_ten_takes_both_split_bets():
+    result, _ = play("8s 8h", "Kc Ah", [P, S, S], player_draws="Td 9c", bet=10)
+    assert [h.outcome for h in result.hands] == [Outcome.LOSE, Outcome.LOSE]
+    assert result.net == -20
+
+
+def test_peek_under_a_ten_when_configured():
+    peeking = DEFAULT_RULES.with_(dealer_peeks_on_ten=True)
+    shoe = Shoe.stacked("6s 5d", "Kc Ah")
+    result = play_round(shoe, NeverAsked(), 10, rules=peeking)
+    assert result.net == -10
 
 
 @pytest.mark.parametrize("dealer", ["Kc Ah", "Ac Kh"])
@@ -153,12 +179,14 @@ def test_declining_insurance_costs_nothing():
     assert result.insurance_bet == 0 and result.net == 10
 
 
-def test_without_a_peek_the_dealer_blackjack_takes_doubles_too():
-    no_peek = DEFAULT_RULES.with_(dealer_peeks=False)
-    result, policy = play("6s 5d", "Kc Ah", [D], player_draws="Th", rules=no_peek)
+def test_without_a_peek_under_an_ace_the_dealer_blackjack_takes_doubles_too():
+    no_peek = DEFAULT_RULES.with_(dealer_peeks_on_ace=False)
+    result, policy = play("6s 5d", "Ac Kh", [D], player_draws="Th", rules=no_peek)
     assert len(policy.legal_seen) == 1  # the player got to act
     assert result.net == -20
-    blackjack, _ = play("As Kd", "Kc Ah", rules=no_peek)
+    insured, _ = play("6s 5d", "Ac Kh", [D], player_draws="Th", insurance=True, rules=no_peek)
+    assert insured.net == -20 + 10
+    blackjack, _ = play("As Kd", "Ac Kh", rules=no_peek)
     assert blackjack.net == 0
 
 
