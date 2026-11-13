@@ -65,9 +65,9 @@ class RulesConfig:
     split_by_value: bool = True
     double_after_split: bool = True
     #: Hand totals that may double; None means any two cards. Confirmed in
-    #: the app: "Double available when player shows 9, 10 or 11".
-    #: UNCONFIRMED detail: a soft hand counts by its best total here, so
-    #: ace-8 (shown as 9/19) cannot double.
+    #: the app: "Double available when player shows 9, 10 or 11". Either
+    #: total of a soft hand counts, so ace-8 (shown as 9/19) and ace-9
+    #: (10/20) can double; the user doubled an ace-8 in the app.
     double_totals: tuple[int, ...] | None = (9, 10, 11)
     hit_split_aces: bool = True
     #: Does a two-card 21 on a split hand pay as a blackjack? Confirmed in the
@@ -86,8 +86,8 @@ class RulesConfig:
     mixed_pair_payout: float = 6
     #: (minimum total, payout) pairs, highest threshold first.
     four_card_total_payouts: tuple[tuple[int, float], ...] = ((40, 10), (38, 8), (36, 2))
-    #: UNCONFIRMED. Smallest side bet.
-    side_bet_min: float = 10
+    #: Smallest side bet. Confirmed in the app: 5.
+    side_bet_min: float = 5
     #: Confirmed in the app: no cap besides the balance, and a side bet may be
     #: far larger than the main bet (600 on a side bet next to a 10 main bet).
     side_bet_max: float | None = None

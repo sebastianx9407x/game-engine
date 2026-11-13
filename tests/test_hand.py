@@ -74,9 +74,17 @@ def test_double_only_on_nine_ten_or_eleven():
     any_two = DEFAULT_RULES.with_(double_totals=None)
     for text in ["5s 4d", "6s 4d", "6s 5d"]:
         assert D in legal_actions(hand(text), DEFAULT_RULES)
-    for text in ["5s 3d", "7s 5d", "As 7d", "As 8d", "Ts 9d"]:  # 8, 12, soft 18, soft 19, 19
+    for text in ["5s 3d", "7s 5d", "As 7d", "As Ad", "Ts 9d"]:  # 8, 12, soft 18, soft 12, 19
         assert D not in legal_actions(hand(text), DEFAULT_RULES)
         assert D in legal_actions(hand(text), any_two)
+
+
+def test_soft_hand_doubles_when_its_low_total_is_nine_or_ten():
+    # Ace-8 shows 9/19 and ace-9 shows 10/20: both may double.
+    assert D in legal_actions(hand("As 8d"), DEFAULT_RULES)
+    assert D in legal_actions(hand("9s Ad"), DEFAULT_RULES)
+    assert D not in legal_actions(hand("As 7d"), DEFAULT_RULES)  # 8/18
+    assert D in legal_actions(hand("As 8d", from_split=True), DEFAULT_RULES, num_hands=2)
 
 
 def test_mixed_ten_value_cards_split_only_when_allowed():

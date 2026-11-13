@@ -32,6 +32,18 @@ def hand_value(cards: Iterable[int]) -> tuple[int, bool]:
     return total, aces > 0
 
 
+def low_total(cards: Iterable[int]) -> int:
+    """Total with every ace counted as 1 (the smaller number shown on a soft hand)."""
+    return sum(1 if VALUE[card] == 11 else VALUE[card] for card in cards)
+
+
+def can_double_total(hand: Hand, rules: RulesConfig) -> bool:
+    """Whether the hand's total is one that may double; either total of a soft hand counts."""
+    if rules.double_totals is None:
+        return True
+    return hand.total in rules.double_totals or low_total(hand.cards) in rules.double_totals
+
+
 def is_natural(card_a: int, card_b: int) -> bool:
     """Two cards making 21."""
     return VALUE[card_a] + VALUE[card_b] == 21
@@ -105,7 +117,7 @@ def legal_actions(
     actions = [Action.STAND, Action.HIT]
     if len(hand.cards) == 2:
         can_cover = bankroll >= hand.bet or not rules.require_balance_for_extra_bets
-        total_allowed = rules.double_totals is None or hand.total in rules.double_totals
+        total_allowed = can_double_total(hand, rules)
         if can_cover and total_allowed and (not hand.from_split or rules.double_after_split):
             actions.append(Action.DOUBLE)
         if can_cover and num_hands - 1 < rules.max_splits and is_pair(hand, rules):

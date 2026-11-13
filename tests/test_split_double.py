@@ -49,6 +49,13 @@ def test_double_is_only_offered_on_nine_ten_or_eleven():
         play("As 7d", "Tc 8h", [D], player_draws="2h")
 
 
+def test_soft_nineteen_can_double():
+    result, _ = play("As 8d", "6c Th", [D], player_draws="5h", dealer_draws="Kd", bet=10)
+    assert result.hands[0].cards == tuple(parse_cards("As 8d 5h"))
+    assert result.hands[0].total == 14 and result.hands[0].doubled
+    assert result.net == 20  # dealer busts
+
+
 def test_double_on_any_two_cards_when_configured():
     any_two = DEFAULT_RULES.with_(double_totals=None)
     for player in ["2s 3d", "Ts 9d", "As 7d", "7s 7d"]:

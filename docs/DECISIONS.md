@@ -51,9 +51,9 @@ Blackjack at 3:2 on an odd bet and insurance at half the bet both produce half c
 |---|---|---|
 | `split_by_value` | `True` | No longer a guess: the user confirmed (2026-11-13) that 10, J, Q and K all split with each other. |
 | `split_deal_both_first` | `False` | Second split hand gets its card when its turn starts (casino procedure). Changes which card lands where, not the odds. |
-| `double_totals` | `(9, 10, 11)` | No longer a guess: the user read the rule in the app (2026-11-13), "Double available when player shows 9, 10 or 11", matching the dev client build. The plan's "double on any first two cards" was wrong. Still open: a soft hand counts by its best total here, so ace-8 (shown as 9/19) cannot double; check in the app. |
+| `double_totals` | `(9, 10, 11)` | No longer a guess: the user read the rule in the app (2026-11-13), "Double available when player shows 9, 10 or 11". Either total of a soft hand counts: the user doubled an ace-8 (shown as 9/19), so ace-8 and ace-9 can double. The plan's "double on any first two cards" was wrong. |
 | `split_21_is_blackjack` | `False` | No longer a guess: the user confirmed (2026-11-13) that ace-ten after a split pays 1:1. |
-| `side_bet_min` | `10` | Same minimum as the main bet. |
+| `side_bet_min` | `5` | No longer a guess: the user confirmed (2026-11-13) the smallest side bet is 5. |
 | `require_balance_for_extra_bets` | `True` | No longer a guess for double and split: the user confirmed (2026-11-13) both are greyed out after betting the whole balance. Assumed to apply to insurance too. |
 | `dealer_peeks` | `True` | From the plan. With `False`, a dealer blackjack takes doubled and split bets too. |
 | `surrender` | `False` | No longer a guess: the user confirmed (2026-11-13) there is no surrender. |
@@ -108,7 +108,7 @@ These match the engine defaults and are no longer guesses: insurance is offered,
 ## Doubling is limited to 9, 10 or 11 (2026-11-13)
 
 The user read it in the app's rules, along with "Maximum one split per hand" (already the default). `double_totals` now defaults to `(9, 10, 11)`; `None` restores any-two-cards. Effects:
-- No soft doubles and no doubling 8 or less, so the Phase 2 basic strategy chart will differ from the published 6D S17 DAS chart in the soft-hand rows, and the house edge is a little higher than the plan's 0.4–0.5% reference. Validate the solver against the published chart with `double_totals=None`, then report the restricted chart.
+- The only soft doubles are ace-8 and ace-9 (their low totals are 9 and 10), and there is no doubling 8 or less, so the Phase 2 basic strategy chart will differ from the published 6D S17 DAS chart in the soft-hand rows, and the house edge is a little higher than the plan's 0.4–0.5% reference. Validate the solver against the published chart with `double_totals=None`, then report the restricted chart.
 - Double after split still applies when the split hand totals 9, 10 or 11.
 - The research's "missed soft double" errors no longer exist (`research/archetypes.md` §4.7).
 

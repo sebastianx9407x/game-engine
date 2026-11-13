@@ -199,7 +199,9 @@ def test_side_bets_count_against_the_balance():
 
 def test_side_bet_limits():
     with pytest.raises(InvalidBetError):
-        play("Ts 9d", "Tc 8h", side_bets=SideBets(perfect_pairs=5))
+        play("Ts 9d", "Tc 8h", side_bets=SideBets(perfect_pairs=4))
+    result, _ = play("Ts 9d", "Tc 8h", side_bets=SideBets(perfect_pairs=5))
+    assert result.perfect_pairs_net == -5
     capped = DEFAULT_RULES.with_(side_bet_max=100)
     with pytest.raises(InvalidBetError):
         play("Ts 9d", "Tc 8h", side_bets=SideBets(four_card_total=101), rules=capped)
