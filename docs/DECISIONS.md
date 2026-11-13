@@ -54,7 +54,7 @@ Blackjack at 3:2 on an odd bet and insurance at half the bet both produce half c
 | `split_deal_both_first` | `False` | Second split hand gets its card when its turn starts (casino procedure). Changes which card lands where, not the odds. |
 | `split_21_is_blackjack` | `False` | Ace-ten after a split pays 1:1. Standard. |
 | `side_bet_min` | `10` | Same minimum as the main bet. |
-| `require_balance_for_extra_bets` | `True` | From the plan. Also applies to insurance. |
+| `require_balance_for_extra_bets` | `True` | No longer a guess for double and split: the user confirmed (2026-11-13) both are greyed out after betting the whole balance. Assumed to apply to insurance too. |
 | `dealer_peeks` | `True` | From the plan. With `False`, a dealer blackjack takes doubled and split bets too. |
 | `surrender` | `False` | From the plan. When on, it is late surrender on the first decision. |
 

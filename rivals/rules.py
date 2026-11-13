@@ -67,7 +67,8 @@ class RulesConfig:
     split_21_is_blackjack: bool = False
     #: Late surrender (first decision only, lose half the bet).
     surrender: bool = False
-    #: UNCONFIRMED. Doubles, splits and insurance need spare chips to cover.
+    #: Doubles, splits and insurance need spare chips to cover. Confirmed in
+    #: the app for double and split: both are greyed out after an all-in bet.
     require_balance_for_extra_bets: bool = True
 
     # --- side bets ---
