@@ -33,7 +33,7 @@ class RulesConfig:
     # --- shoe ---
     #: UNCONFIRMED (DraftKings says 6).
     num_decks: int = 6
-    #: UNCONFIRMED. False: one sequential shoe. The dealer's two starting
+    #: Confirmed by the user. False: one sequential shoe. The dealer's two starting
     #: cards are the same for both players, but the dealer draws after the
     #: player, so every card a player takes shifts what the dealer draws.
     #: True: the dealer's draws come from their own end of the shoe, so the

@@ -26,14 +26,13 @@ The plan's default was "dealer cards fixed regardless of player draws". The defa
 
 Both players always face the same upcard and hole card. But a player who hits, doubles or splits uses up cards, so the dealer's draws can differ between the two players, and the dealer can bust for one and make a hand for the other.
 
-Why it changed: the user found an online answer saying that in 21 Rivals "hitting, splitting, or doubling down uses up cards from the shoe and changes which cards the dealer eventually draws". This is also the most literal reading of DraftKings' "same six-deck shoe order". The evidence is weak, though: the answer reads like an AI summary, not a DraftKings page, and a web search found no primary source. The flag stays marked UNCONFIRMED.
+Why it changed: the user confirmed on 2026-11-13 that this is how the game deals. The card order is the same for both players however many cards each takes; what differs is who gets each card. If one player stands earlier than the other, their dealer draws a card that the other player drew. (An online answer the user found earlier said the same, and it is the literal reading of DraftKings' "same six-deck shoe order".)
 
-`RulesConfig.dealer_cards_independent=True` restores the plan's model, where dealer draws come off the back of the shoe and the dealer's whole hand is a function of the shoe alone. Both models are tested.
+`RulesConfig.dealer_cards_independent=True` keeps the plan's original model available, where dealer draws come off the back of the shoe and the dealer's whole hand is a function of the shoe alone. Both models are tested, but only the sequential one needs to be reported from here on.
 
 What this means for later phases:
 - Phase 2 (solver): nothing. The EV and outcome distribution of a single player's decision are identical under both models.
-- Phase 3–4 (matches, optimizer): it matters. Under the sequential shoe, playing a hand differently from the opponent also re-rolls the dealer's result, so play deviations create more divergence than under the fixed-dealer model. Headline results should be reported under both until the app settles it.
-- To settle it in free play: two people play the same match, one stands and one hits without busting on a hand where the dealer must draw, then compare the dealer's drawn cards.
+- Phase 3–4 (matches, optimizer): it matters. Playing a hand differently from the opponent also re-rolls the dealer's result, so play deviations create more divergence than the plan assumed. In particular, taking one card more or fewer than the opponent hands the dealer a different card, even when the player's own result is unchanged.
 
 **D5. `resolve.py` defines a small `Policy` protocol (`act`, `take_insurance`), not the full `Agent`.**
 The plan's `Agent` (`bet`, `side_bets`, `act`) belongs to Phase 3 with `match.py`. A round only needs play decisions, so `play_round(shoe, policy, bet, side_bets, balance=, rules=)` takes the wagers as arguments. A Phase 3 `Agent` satisfies `Policy` by having those two methods. Policies receive a `DecisionContext` (hand, upcard, legal actions, hand index, all hands, spare chips, rules). `ScriptedPolicy` ships in the package because replaying logged hands needs it too.
