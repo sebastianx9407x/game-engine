@@ -53,7 +53,6 @@ Blackjack at 3:2 on an odd bet and insurance at half the bet both produce half c
 | `split_by_value` | `True` | K-Q can split. Usual for online blackjack. |
 | `split_deal_both_first` | `False` | Second split hand gets its card when its turn starts (casino procedure). Changes which card lands where, not the odds. |
 | `split_21_is_blackjack` | `False` | Ace-ten after a split pays 1:1. Standard. |
-| `allow_short_all_in` | `False` | A balance below 10 cannot be bet. |
 | `side_bet_min` | `10` | Same minimum as the main bet. |
 | `require_balance_for_extra_bets` | `True` | From the plan. Also applies to insurance. |
 | `dealer_peeks` | `True` | From the plan. With `False`, a dealer blackjack takes doubled and split bets too. |
@@ -74,8 +73,8 @@ Main bet plus side bets must fit in the balance. Doubles, splits and insurance m
 **D10a. Side bets give the player no information during the hand.** *(confirmed 2026-11-13)*
 The user checked in free play: the 4-Card Total result appears only after the hand ends, once the hole card is face up. So it cannot be used to read the dealer's hole card before acting. This matches the engine, where a policy's `DecisionContext` carries no side-bet results. Side bets stay a pure variance tool.
 
-**D10b. A player who reaches 0 chips is out; their match ends there.** *(confirmed 2026-11-13)*
-The user checked in free play. Nothing in Phase 1 changes, since `play_round` already refuses a bet with no balance. `match.py` (Phase 3) must stop dealing to a player at 0 and score them with a final balance of 0. Still open: whether a balance between 0 and 10 can be bet (`allow_short_all_in`), and how a match is scored when both players finish on 0.
+**D10b. A player with fewer than 10 chips is bankrupt; their match ends there.** *(confirmed 2026-11-13)*
+The user checked both cases in free play: the match ends at 0, and a balance under the 10 minimum also counts as bankrupt and cannot be bet. That confirms `allow_short_all_in=False`, and `play_round` already refuses such a bet. `match.py` (Phase 3) must stop dealing to a player once their balance is below `min_bet`. Still open: whether a bankrupt player's leftover chips (say 5) count as their final balance or as 0, which only matters when both players go bankrupt.
 
 **D11. Shuffles are numpy PCG64 seeded with `[match_seed, round_index]`.**
 `match_shoes(seed, rules)` gives the shoes for a match. A test pins the first cards of one shuffle so a numpy upgrade cannot silently change what a seed means. These shuffles are our own; they cannot reproduce DraftKings' shuffle for a real match ID.

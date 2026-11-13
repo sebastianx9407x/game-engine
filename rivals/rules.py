@@ -18,8 +18,9 @@ class RulesConfig:
     min_bet: float = 10
     #: None means the only cap is the player's balance.
     max_bet: float | None = None
-    #: UNCONFIRMED. May a player holding less than `min_bet` bet everything
-    #: they have left? If False they cannot bet at all.
+    #: Confirmed in the app: a balance below `min_bet` is bankrupt and cannot
+    #: be bet, so the match is over for that player. True would instead let
+    #: them bet everything they have left.
     allow_short_all_in: bool = False
     #: UNCONFIRMED. Value of a match that ends with equal balances.
     match_tie_value: float = 0.5
