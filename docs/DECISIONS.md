@@ -251,3 +251,23 @@ Caveats:
 - Everything here is measured against the modelled field. The population shares are low-confidence priors until real MATCH STATS screens are logged.
 - The card has about 190 lines, too many to memorise. A simplified card that keeps most of the score is the next step.
 - The strategy is weakest against opponents who reason the same way. `robust.py` (Phase 5) should measure how it does against best responses to itself.
+
+## Screen reader, first version (2026-11-13)
+
+`rivals/screen/` reads the game from a window on the Mac and `python -m rivals.screen.live --window Discord` prints what the optimized strategy would do. It was built from 491 frames of free play recorded through a Discord stream of the phone. `--replay <folder>` runs saved frames through it.
+
+How it works:
+- `capture.py` grabs one window with `screencapture` and reads its text with macOS's built-in recogniser, through two small Swift helpers compiled into `.cache/` on first use. About half a second per frame. The terminal needs the Screen Recording permission.
+- `reader.py` needs no card recognition. The app prints each hand's total in a badge ("13", or "9/19" when soft), the dealer's total, the balance, the round and the chips staked, and the DOUBLE and SPLIT buttons are lit only when available. A splittable hand's total gives the pair away.
+- `live.py` tracks the match: bet advice on the betting screen, play advice when HIT is lit, "insurance NO" on the prompt. The main-bet result of each hand comes from the balance change, or from the final totals when side bets were placed.
+
+Seen in the app while building it, all matching the engine: double is offered on 9/19 (ace-8); after a split both hands get a card at once, the right hand is played first, the hand in play has a highlighted badge, and double is offered on a split hand showing 10; a mixed pair on a 25 side bet paid 150.
+
+Known gaps, not fixed yet:
+- No automated tests for `rivals/screen/` (the recorded frames stay out of git because some show usernames).
+- The balance is sometimes read mid-animation while it counts up, giving a wrong starting balance for the next bet. It should wait for the same value on two frames.
+- A Discord stream sometimes blurs for a few seconds; hands that go by unread have their result guessed from the balance. A cable to QuickTime gives a sharper picture.
+- The insurance prompt and the blackjack and push messages have not been seen yet, so those paths are untested.
+- With a ten-value card up the dealer badge reads 10; an ace is assumed to read 1/11 or 11, unconfirmed.
+
+Whether a tool like this may be used in paid contests depends on DraftKings' terms, which have not been read. It has only been run on free play.
